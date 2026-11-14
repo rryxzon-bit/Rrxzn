@@ -151,9 +151,9 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
  // Subtle angle-dependent varnish glint: physically based specular response,
 // not an emissive glow or an expensive screen-space reflection.
  const doorSurface=new THREE.MeshPhysicalMaterial({
-  map:doorTexture,color:doorFinish[0],roughness:doorVariant==='cellar'?.77:.55,
-  metalness:0,bumpMap:woodBump,bumpScale:.023,
-  clearcoat:doorVariant==='cellar'?.035:.19,clearcoatRoughness:.34,
+  map:doorTexture,color:doorFinish[0],roughness:doorVariant==='cellar'?.97:.88,
+  metalness:0,bumpMap:woodBump,bumpScale:.034,
+  clearcoat:doorVariant==='cellar'?0:.012,clearcoatRoughness:.94,
   side:THREE.DoubleSide,emissive:doorFinish[2],emissiveIntensity:.045
  });
  for(const sign of [-1,1]){
