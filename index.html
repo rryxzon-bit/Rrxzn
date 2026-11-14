@@ -7,9 +7,9 @@ window.addEventListener('unhandledrejection',function(e){console.warn('Game load
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s),scene=new THREE.Scene();scene.background=new THREE.Color(0x151310);scene.fog=new THREE.Fog(0x151310,15,37);
-const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,.85));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.92;renderer.shadowMap.enabled=false;document.body.prepend(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,.85));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.45;renderer.shadowMap.enabled=false;document.body.prepend(renderer.domElement);
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.07,65);camera.rotation.order='YXZ';scene.add(camera);
-scene.add(new THREE.HemisphereLight(0x8b91a0,0x17100c,.48));scene.add(new THREE.AmbientLight(0x817568,.12));
+scene.add(new THREE.HemisphereLight(0xc3c9d0,0x3c3027,1.15));scene.add(new THREE.AmbientLight(0xb6a797,.44));
 // Full texture-backed PBR materials. All maps are stored locally in assets/pbr.
 const textureLoader=new THREE.TextureLoader();const assetAudit={texturesLoaded:0,texturesFailed:[],modelsLoaded:0,modelsFailed:[]};window.__THE_HOUSE_ASSETS=assetAudit;
 window.addEventListener('error',e=>console.error('THE HOUSE runtime error',e.message));
@@ -33,7 +33,7 @@ function pbr(name,rx=1,ry=1,opts={}){
  // glTF metallic-roughness convention: green=roughness, blue=metalness.
  return material;
 }
-const ceilingMat=new THREE.MeshStandardMaterial({color:0x82776a,roughness:1});
+const ceilingMat=new THREE.MeshStandardMaterial({color:0xb4a89a,roughness:1});
 const mat={
  wall:pbr('vintage_wallpaper_brown',2,1,{normalStrength:.35}),wallUpper:pbr('vintage_wallpaper',2,1,{normalStrength:.35}),wallBasement:pbr('stained_stone',2,2,{normalStrength:.55}),plaster:pbr('peeling_plaster',2,1,{normalStrength:.45}),cracked:pbr('cracked_plaster',2,1,{normalStrength:.5}),
  wood:pbr('aged_oak',1,1),floor:pbr('weathered_floor',3,4,{normalStrength:.5}),
@@ -171,7 +171,7 @@ function doorBlocked(d,nextAngle){
  }
  return false;
 }
-function lamp(x,y,z,brightness=6){const bulb=new THREE.PointLight(0xffc38b,brightness*.35,6,2);bulb.position.set(x,y,z);scene.add(bulb);lights.push(bulb);box(x,y+.12,z,.4,.18,.4,mat.brass);let shade=new THREE.Mesh(new THREE.ConeGeometry(.38,.26,12),mat.paper);shade.rotation.x=Math.PI;shade.position.set(x,y-.12,z);scene.add(shade)}
+function lamp(x,y,z,brightness=6){const bulb=new THREE.PointLight(0xffd0a5,brightness*.7,9,2);bulb.position.set(x,y,z);scene.add(bulb);lights.push(bulb);box(x,y+.12,z,.4,.18,.4,mat.brass);let shade=new THREE.Mesh(new THREE.ConeGeometry(.38,.26,12),mat.paper);shade.rotation.x=Math.PI;shade.position.set(x,y-.12,z);scene.add(shade)}
 function furniture(kind,x,z,angle=0,y=0){
 // Solid furnishings block the player; rugs and wall art remain non-solid.
 const bounds={table:[2,1.05],desk:[2,1.05],chair:[.56,.52],cabinet:[1.4,.65],wardrobe:[1.8,.65],bed:[1.65,2.5],sofa:[2.1,.88],shelf:[1.5,.4],crate:[.8,.8],piano:[2.1,1.25]};
@@ -218,11 +218,17 @@ furniture('table',6,-8,0,-3.2);furniture('shelf',8,-10,Math.PI/2,-3.2);
 furniture('crate',-6,7,0,-3.2);furniture('crate',-7.5,8.5,0,-3.2);
 furniture('cabinet',7,8,0,-3.2);furniture('chair',5,8,0,-3.2);
 for(const [x,z] of [[-6,-6],[6,-6],[-6,7],[6,7],[0,-5]]){
- const bulb=new THREE.PointLight(0xffc18a,1.8,5,2);bulb.position.set(x,-.75,z);scene.add(bulb);lights.push(bulb);
+ const bulb=new THREE.PointLight(0xffd3a4,3.0,8,2);bulb.position.set(x,-.75,z);scene.add(bulb);lights.push(bulb);
  box(x,-.55,z,.42,.12,.42,mat.iron)
 }
 // Upper floor above hall and bedroom; stairwell void in southwest back.
 box(0,3.2,-5.5,18,.24,13,mat.floor);box(3,3.2,7,12,.24,10,mat.floor);box(0,6.55,0,18,.25,24,ceilingMat);dividerX(-3,-12,1,[[-7,-5]],3.2,3.2);dividerX(3,-12,12,[[6,8]],3.2,3.2);dividerZ(1,-9,-3,[],3.2,3.2);dividerZ(1,3,9,[[5.1,6.9]],3.2,3.2);dividerZ(-2.4,3,9,[[5.2,6.9]],3.2,3.2);dividerZ(-1.8,-9,-3,[[-6.9,-5.2]],3.2,3.2);wall(-9,4.8,0,.3,3.2,24);wall(9,4.8,0,.3,3.2,24);wall(0,4.8,-12,18,3.2,.3);wall(0,4.8,12,18,3.2,.3);
+// Ground-floor ceiling underside: the upper slab was exposed as dark floorboards.
+box(0,3.05,-5.5,18,.09,13,ceilingMat);
+box(3,3.05,7,12,.09,10,ceilingMat);
+// Finish stairwell edges with dark timber fascia rather than exposed gaps.
+for(const edgeX of [-7.35,-4.65])box(edgeX,3.12,6,.16,.25,8.1,mat.dark);
+box(-6,3.12,2,.16,.25,2.8,mat.dark);
 // Staircase 16 solid steps: ascending toward negative z. Stair opening x=-3 at z 6..8.
 for(let i=0;i<16;i++){const z=10-(i+.5)*.5,h=(i+1)*.2;box(-6,h/2,z,2.35,h,.49,mat.wood)}box(-7.35,1.75,6,.1,3.3,8.5,mat.dark);for(let i=0;i<6;i++)box(-7.3,.8+i*.45,10-i*1.3,.11,1.5,.11,mat.wood);
 const exit=makeDoor(0,-11.9,'z','Главный выход','',()=>{if(!keys.has('ключ выхода')){notice('Нужен ключ выхода');return}if(!fuse){notice('Электронный замок без питания. Найди предохранитель');return}won=true;active=false;$('#victory').style.display='flex'});
@@ -296,7 +302,7 @@ const fuseMesh=box(6,1.14,7,.25,.35,.16,mat.green);interactions.push({x:6,y:1.1,
 const hand=new THREE.Group();hand.position.set(.35,-.34,-.65);camera.add(hand);let cylinder=new THREE.Mesh(new THREE.CylinderGeometry(.07,.075,.36,12),mat.dark);cylinder.rotation.x=Math.PI/2;hand.add(cylinder);let head=new THREE.Mesh(new THREE.CylinderGeometry(.115,.095,.13,16),mat.iron);head.rotation.x=Math.PI/2;head.position.z=-.22;hand.add(head);let lens=new THREE.Mesh(new THREE.CircleGeometry(.088,16),new THREE.MeshBasicMaterial({color:0xffe8ac}));lens.position.z=-.30;hand.add(lens);
 mountModel('assets/models/flashlight_pbr.glb',hand,[.19,.19,.36],[0,-.12,-.12],Math.PI/2,false);
 modelSource('assets/models/flashlight_pbr.glb').then(source=>{if(source){cylinder.visible=false;head.visible=false;lens.visible=false}});
-const spot=new THREE.SpotLight(0xffe7c1,14,12,.65,1,1.5);spot.position.set(0,-.06,-.27);spot.target.position.set(0,-.04,-8);camera.add(spot,spot.target);
+const spot=new THREE.SpotLight(0xffe7c1,20,15,.75,1,1.5);spot.position.set(0,-.06,-.27);spot.target.position.set(0,-.04,-8);camera.add(spot,spot.target);
 function notice(s){$('#message').textContent=s;$('#message').style.opacity='1';clearTimeout(notice.timer);notice.timer=setTimeout(()=>$('#message').style.opacity='0',2500)}function updateInventory(){$('#items').textContent='Инвентарь: '+([ ...keys,...(fuse?['предохранитель']:[])].join(', ')||'пусто');$('#objective').textContent=fuse&&keys.has('ключ выхода')?'Вернись к главному выходу':'Найди ключи и предохранитель'}
 const ray=new THREE.Raycaster();let near=null;function findNear(){ray.setFromCamera(new THREE.Vector2(0,0),camera);let best=null,bestScore=2.55;for(let o of interactions){if(o.enabled&&!o.enabled())continue;const v=new THREE.Vector3(o.x,o.y,o.z);let distance=camera.position.distanceTo(v);if(distance>2.7)continue;let direction=v.clone().sub(camera.position).normalize();let facing=direction.dot(ray.ray.direction);if(facing<.69)continue;// Block interactions through solid walls or closed doors.
 let blocked=false;const dir=v.clone().sub(camera.position);const rayToTarget=new THREE.Ray(camera.position,dir.clone().normalize());
