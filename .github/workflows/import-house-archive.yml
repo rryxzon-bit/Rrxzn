@@ -1,0 +1,41 @@
+name: Import THE HOUSE full asset archive
+on:
+  push:
+    branches: [main]
+    paths:
+      - THE_HOUSE_GITHUB_UPLOAD_READY.zip
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Verify archive and extract complete project
+        run: |
+          set -euo pipefail
+          test -f THE_HOUSE_GITHUB_UPLOAD_READY.zip
+          unzip -t THE_HOUSE_GITHUB_UPLOAD_READY.zip
+          unzip -o THE_HOUSE_GITHUB_UPLOAD_READY.zip -d .
+          python3 - <<'PY'
+          import pathlib,struct
+          root=pathlib.Path('.')
+          glbs=list(root.glob('assets/**/*.glb'))
+          assert len(glbs)==10, f'Expected 10 GLB models, got {len(glbs)}'
+          for p in glbs:
+              data=p.read_bytes()
+              assert data[:4]==b'glTF' and len(data)==struct.unpack_from('<I',data,8)[0],f'Invalid GLB: {p}'
+          assert (root/'index.html').is_file()
+          print('Validated',len(glbs),'GLB models')
+          PY
+      - name: Commit extracted assets for Vercel deployment
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A assets index.html vercel.json
+          git rm -f THE_HOUSE_GITHUB_UPLOAD_READY.zip
+          git diff --cached --quiet || git commit -m "Publish full THE HOUSE models and PBR textures"
+          git push
