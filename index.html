@@ -311,7 +311,7 @@ keyItem(-6,-4.1,.99,'ключ спальни','Ключ спальни',0xc7c6bb
 const fuseMesh=box(6,1.14,7,.25,.35,.16,mat.green);interactions.push({x:6,y:1.1,z:7,label:'Предохранитель',enabled:()=>!fuse,action:()=>{fuse=true;fuseMesh.visible=false;notice('Предохранитель найден: питание замка восстановлено');updateInventory()}});
 // High-detail first-person flashlight, built from lightweight PBR meshes.
 const hand=new THREE.Group();hand.position.set(.35,-.34,-.65);camera.add(hand);
-const flashlight=new THREE.Group();hand.add(flashlight);
+const flashlight=new THREE.Group();flashlight.scale.setScalar(.78);hand.add(flashlight);
 const anodized=new THREE.MeshStandardMaterial({color:0x252b30,metalness:.78,roughness:.32});
 const blackRubber=new THREE.MeshStandardMaterial({color:0x121516,metalness:.03,roughness:.87});
 const steel=new THREE.MeshStandardMaterial({color:0x7d8589,metalness:.88,roughness:.23});
