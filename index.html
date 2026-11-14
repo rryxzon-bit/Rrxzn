@@ -98,21 +98,56 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
  const pivot=new THREE.Group();
  pivot.position.set(x-(axis==='z'?half:0),y,z-(axis==='x'?half:0));scene.add(pivot);
  const alongX=axis==='z';
- const doorFace=box(alongX?half:0,1.15,alongX?0:half,alongX?span:thick,2.43,alongX?thick:span,mat.door,pivot);
-// Raised panels and a full wooden surround, on both faces of the leaf.
-for(const side of [-1,1]){
- for(const panel of [[.73,.54,.66,.67],[.73,1.57,.66,.91]]){
-  const [mid,cy,pw,ph]=panel;
-  if(alongX){
-   box(mid,cy,side*(thick/2+.013),pw,ph,.026,mat.dark,pivot);
-   box(mid,cy,side*(thick/2+.03),pw-.11,ph-.12,.012,mat.door,pivot);
-  }else{
-   box(side*(thick/2+.013),cy,mid,.026,ph,pw,mat.dark,pivot);
-   box(side*(thick/2+.03),cy,mid,.012,ph-.12,pw-.11,mat.door,pivot);
+ // Victorian six-panel door with solid stiles, rails and inset moulded panels.
+ const doorWood=new THREE.MeshStandardMaterial({color:0x59402e,roughness:.76,metalness:0});
+ const doorInset=new THREE.MeshStandardMaterial({color:0x38271d,roughness:.87});
+ const doorEdge=new THREE.MeshStandardMaterial({color:0x76563a,roughness:.65});
+ const agedBrass=new THREE.MeshStandardMaterial({color:0x8b7046,metalness:.78,roughness:.38});
+ const brassShadow=new THREE.MeshStandardMaterial({color:0x3c3126,metalness:.67,roughness:.62});
+ const leafCenter=alongX?new THREE.Vector3(half,1.215,0):new THREE.Vector3(0,1.215,half);
+ const leaf=new THREE.Group();leaf.position.copy(leafCenter);pivot.add(leaf);
+ // Construct door in local coordinates: horizontal U, vertical Y, thickness V.
+ const part=(u,v,w,h,depth,material)=>{
+  return alongX?box(u,v,0,w,h,depth,material,leaf):box(0,v,u,depth,h,w,material,leaf);
+ };
+ const raised=(u,v,w,h,depth,material,face)=>{
+  return alongX?box(u,v,face,w,h,depth,material,leaf):box(face,v,u,depth,h,w,material,leaf);
+ };
+ part(0,0,span,2.43,thick,doorWood);
+ // Three rows of two recessed panels, visible from both sides.
+ for(const faceSign of [-1,1]){
+  const face=faceSign*(thick/2+.009);
+  for(const cy of [-.72,0,.72])for(const cx of [-.36,.36]){
+   raised(cx,cy,.57,.58,.018,doorInset,face);
+   raised(cx,cy,.49,.50,.013,doorEdge,face+faceSign*.012);
+   raised(cx,cy,.43,.44,.013,doorWood,face+faceSign*.022);
   }
+  // Outer raised mouldings and the middle lock rail.
+  for(const u of [-.705,.705])raised(u,0,.055,2.39,.026,doorEdge,face);
+  for(const v of [-1.185,-.36,.36,1.185])raised(0,v,1.40,.045,.025,doorEdge,face);
  }
-}
- const handle=box(alongX?span-.18:.12,1.05,alongX?.12:span-.18,.13,.11,.13,mat.brass,pivot);
+ // Antique lever handle, backplate, spindle, collar and keyhole on both sides.
+ for(const faceSign of [-1,1]){
+  const face=faceSign*(thick/2+.034),handleU=.54,handleY=-.13;
+  const plate=new THREE.Mesh(new THREE.BoxGeometry(.13,.30,.012),agedBrass);
+  if(alongX){plate.position.set(handleU,handleY,face)}
+  else{plate.rotation.y=Math.PI/2;plate.position.set(face,handleY,handleU)}
+  leaf.add(plate);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.085,14),agedBrass);
+  stem.rotation.x=Math.PI/2;
+  if(alongX){stem.position.set(handleU,handleY,face+faceSign*.048)}
+  else{stem.rotation.z=Math.PI/2;stem.position.set(face+faceSign*.048,handleY,handleU)}
+  leaf.add(stem);
+  const lever=new THREE.Mesh(new THREE.CylinderGeometry(.019,.027,.19,14),agedBrass);
+  lever.rotation.z=Math.PI/2;
+  if(alongX)lever.position.set(handleU-.078,handleY,face+faceSign*.10);
+  else{lever.rotation.set(Math.PI/2,0,0);lever.position.set(face+faceSign*.10,handleY,handleU-.078)}
+  leaf.add(lever);
+  const keyhole=new THREE.Mesh(new THREE.SphereGeometry(.017,10,8),brassShadow);
+  if(alongX)keyhole.position.set(handleU,handleY-.095,face+faceSign*.008);
+  else keyhole.position.set(face+faceSign*.008,handleY-.095,handleU);
+  leaf.add(keyhole);
+ }
  // Model anchored at hinge, with the hinge frame kept separate from the moving leaf.
  // Use one solid, dimensionally correct door leaf. Previous GLB overlay hid this
  // mesh and caused apparent holes because the generated model was not hinged correctly.
