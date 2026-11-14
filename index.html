@@ -70,7 +70,7 @@ const furnishingAssets={
 };
 const geo=new THREE.BoxGeometry(1,1,1),solids=[],furnitureColliders=[],doors=[],interactions=[],lights=[],keys=new Set();let fuse=false,won=false,flashOn=true,crouched=false,sprint=false,active=false,yaw=0,pitch=0,sensitivity=1;let px=0,pz=0,py=1.65,level=0;
 function box(x,y,z,w,h,d,m,parent=scene){let o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(w,h,d);o.castShadow=false;o.receiveShadow=true;parent.add(o);return o}
-function wall(x,y,z,w,h,d){box(x,y,z,w,h,d,y>3.3?mat.wallUpper:y<0?mat.wallBasement:mat.wall);solids.push({x,z,w,d,y0:y-h/2,y1:y+h/2})}
+function wall(x,y,z,w,h,d){box(x,y,z,w,h,d,y>3.3?mat.wallUpper:y<0?(x<0?mat.wallBasement:mat.cracked):mat.wall);solids.push({x,z,w,d,y0:y-h/2,y1:y+h/2})}
 function dividerX(x,z1,z2,openings=[],height=3.25,y0=0){let cursor=z1;for(let [a,b] of openings.sort((p,q)=>p[0]-q[0])){if(a>cursor)wall(x,y0+height/2,(cursor+a)/2,.22,height,a-cursor);wall(x,y0+(height+2.45)/2,(a+b)/2,.22,height-2.45,b-a);cursor=b}if(cursor<z2)wall(x,y0+height/2,(cursor+z2)/2,.22,height,z2-cursor)}
 function dividerZ(z,x1,x2,openings=[],height=3.25,y0=0){let cursor=x1;for(let [a,b] of openings.sort((p,q)=>p[0]-q[0])){if(a>cursor)wall((cursor+a)/2,y0+height/2,z,a-cursor,height,.22);wall((a+b)/2,y0+(height+2.45)/2,z,b-a,height-2.45,.22);cursor=b}if(cursor<x2)wall((cursor+x2)/2,y0+height/2,z,x2-cursor,height,.22)}
 function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
