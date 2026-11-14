@@ -1,0 +1,59 @@
+{
+  "project": "THE HOUSE",
+  "source": "/mnt/data/THE_HOUSE_publish_candidate",
+  "status": "assets_pending_transfer",
+  "totalBytes": 26695019,
+  "models": [
+    {
+      "path": "assets/doors/the_house_basement_door.glb",
+      "size": 587816,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/doors/the_house_entrance_door.glb",
+      "size": 597652,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/doors/the_house_interior_door.glb",
+      "size": 581452,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/models/flashlight_pbr.glb",
+      "size": 1759052,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/models_mobile/antique_bed_detail_pbr_orm.glb",
+      "size": 1368736,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/models_mobile/dining_chair_detail_pbr_orm.glb",
+      "size": 839852,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/models_mobile/dining_table_hero_pbr_orm.glb",
+      "size": 746324,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/models_mobile/paneled_door_detail_pbr_orm.glb",
+      "size": 941920,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/models_mobile/victorian_sideboard_hero_pbr_orm.glb",
+      "size": 1049656,
+      "glb2HeaderValidated": true
+    },
+    {
+      "path": "assets/models_mobile/victorian_wardrobe_hero_pbr_orm.glb",
+      "size": 1063060,
+      "glb2HeaderValidated": true
+    }
+  ],
+  "note": "This manifest is a QA inventory, not a replacement for binary assets. Do not deploy until all referenced assets are present."
+}
