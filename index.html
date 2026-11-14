@@ -120,7 +120,7 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
  pivot.position.set(x-(axis==='z'?half:0),y,z-(axis==='x'?half:0));scene.add(pivot);
  const alongX=axis==='z';
  // Victorian six-panel door with solid stiles, rails and inset moulded panels.
- const doorWood=new THREE.MeshStandardMaterial({color:0x35271f,roughness:.93,metalness:0});
+ const doorWood=mat.door;
  const doorInset=new THREE.MeshStandardMaterial({color:0x211914,roughness:.98});
  const doorEdge=new THREE.MeshStandardMaterial({color:0x58402e,roughness:.91});
  const agedBrass=new THREE.MeshStandardMaterial({color:0x645438,metalness:.65,roughness:.74});
@@ -139,9 +139,9 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
  // No low-resolution photo stretched across the entire door.
  const variant=(Math.abs(Math.round(x*3+z*2))%3);
  const woodTones=[0x4b3022,0x5a4130,0x382d26];
- const doorFrameMat=new THREE.MeshStandardMaterial({color:woodTones[variant],roughness:.91,metalness:0,bumpMap:woodBump,bumpScale:.012});
- const doorPanelMat=new THREE.MeshStandardMaterial({color:[0x39251d,0x483324,0x2d2923][variant],roughness:.94,metalness:0,bumpMap:woodBump,bumpScale:.017});
- const doorMouldMat=new THREE.MeshStandardMaterial({color:[0x694731,0x70533a,0x494036][variant],roughness:.88,metalness:0,bumpMap:woodBump,bumpScale:.012});
+ const doorFrameMat=mat.door.clone();doorFrameMat.color.setHex(woodTones[variant]);doorFrameMat.roughness=.93;doorFrameMat.metalness=0;
+ const doorPanelMat=mat.door.clone();doorPanelMat.color.setHex([0x775747,0x80624a,0x635d50][variant]);doorPanelMat.roughness=.96;doorPanelMat.metalness=0;
+ const doorMouldMat=mat.door.clone();doorMouldMat.color.setHex([0x967052,0x9b7a5b,0x776c60][variant]);doorMouldMat.roughness=.9;doorMouldMat.metalness=0;
  const trimStrip=(u,v,w,h,face,mat=doorMouldMat)=>raised(u,v,w,h,.024,mat,face);
  for(const sign of [-1,1]){
   const f=sign*(thick/2+.006);
@@ -359,7 +359,9 @@ if(kind==='cabinet'||kind==='wardrobe'){
  for(const sx of [-1,1])b(sx*(w/2-.15),.045,0,.12,.09,.48,recessed);
 }
 if(kind==='bed'){b(0,.35,0,1.65,.3,2.5,mat.dark);b(0,.56,0,1.5,.2,2.25,mat.cloth);b(0,.87,-1.2,1.65,1.1,.16,mat.iron);b(0,.73,-.85,1.28,.16,.55,mat.paper)}if(kind==='sofa'){b(0,.54,0,2.1,.68,.88,mat.cloth);b(0,1.04,.39,2.1,1,.2,mat.cloth);for(let a of [-.95,.95])b(a,.79,0,.23,.66,.9,mat.cloth)}if(kind==='shelf'){b(0,1.05,0,1.5,2.1,.4,mat.dark);for(let h of [.35,.8,1.25,1.7])b(0,h,.03,1.46,.08,.43,mat.wood);for(let i=0;i<11;i++)b(-.58+(i%5)*.29,.49+Math.floor(i/5)*.48,.02,.12,.24,.24,i%2?mat.red:mat.paper)}if(kind==='rug')b(0,.025,0,2.7,.035,3.5,mat.red);if(kind==='picture'){b(0,1.95,0,1.2,.88,.09,mat.brass);b(0,1.95,.06,1.04,.72,.025,mat.red);b(-.18,1.95,.075,.34,.48,.01,mat.dark)}if(kind==='crate'){b(0,.38,0,.8,.76,.8,mat.wood);b(0,.7,.42,.8,.1,.06,mat.dark)}if(kind==='piano'){b(0,.9,0,2.1,.45,1.25,mat.dark);b(0,1.38,-.55,2.1,.75,.15,mat.dark);b(0,1.09,.42,1.82,.07,.32,mat.paper)}}
-if(furnishingAssets[kind]){const [path,dimensions]=furnishingAssets[kind];mountModel(path,g,dimensions,[0,0,0],0,false)}
+// Never overlay imported furniture on top of the procedural furniture.
+// If a detailed GLB exists, it replaces the old mesh entirely.
+if(furnishingAssets[kind]){const [path,dimensions]=furnishingAssets[kind];mountModel(path,g,dimensions,[0,0,0],0,true)}
 return g}
 // Ground floor: central hall, living room, kitchen, study, stairwell.
 // Ground slab split around a real basement stairwell (x ±1.35, z 3..10).
