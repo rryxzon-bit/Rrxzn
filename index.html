@@ -30,6 +30,7 @@ function pbr(name,rx=1,ry=1,opts={}){
  // glTF metallic-roughness convention: green=roughness, blue=metalness.
  return material;
 }
+const ceilingMat=new THREE.MeshStandardMaterial({color:0x82776a,roughness:1});
 const mat={
  wall:pbr('vintage_wallpaper_brown',2,1,{normalStrength:.35}),wallUpper:pbr('vintage_wallpaper',2,1,{normalStrength:.35}),wallBasement:pbr('stained_stone',2,2,{normalStrength:.55}),plaster:pbr('peeling_plaster',2,1,{normalStrength:.45}),cracked:pbr('cracked_plaster',2,1,{normalStrength:.5}),
  wood:pbr('aged_oak',1,1),floor:pbr('weathered_floor',3,4,{normalStrength:.5}),
@@ -69,7 +70,22 @@ const furnishingAssets={
  bed:['assets/models_mobile/antique_bed_detail_pbr_orm.glb',[1.8,1.65,2.5]]
 };
 const geo=new THREE.BoxGeometry(1,1,1),solids=[],furnitureColliders=[],doors=[],interactions=[],lights=[],keys=new Set();let fuse=false,won=false,flashOn=true,crouched=false,sprint=false,active=false,yaw=0,pitch=0,sensitivity=1;let px=0,pz=0,py=1.65,level=0;
-function box(x,y,z,w,h,d,m,parent=scene){let o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(w,h,d);o.castShadow=false;o.receiveShadow=true;parent.add(o);return o}
+// UVs on scaled unit cubes used to stretch 1 square of wallpaper across whole walls.
+// Build real-sized geometry and generate world-size UV repeats for each face.
+const boxGeometryCache=new Map();
+function boxGeometry(w,h,d){
+ const key=[w,h,d].map(n=>n.toFixed(3)).join(':');
+ if(boxGeometryCache.has(key))return boxGeometryCache.get(key);
+ const g=new THREE.BoxGeometry(w,h,d);
+ const uv=g.attributes.uv;
+ // BoxGeometry face order: +/-X, +/-Y, +/-Z (4 vertices per face).
+ const sizes=[[d,h],[d,h],[w,d],[w,d],[w,h],[w,h]];
+ for(let f=0;f<6;f++)for(let k=0;k<4;k++){
+  const i=f*4+k;uv.setXY(i,uv.getX(i)*sizes[f][0]/2,uv.getY(i)*sizes[f][1]/2);
+ }
+ uv.needsUpdate=true;boxGeometryCache.set(key,g);return g;
+}
+function box(x,y,z,w,h,d,m,parent=scene){let o=new THREE.Mesh(boxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=false;o.receiveShadow=true;parent.add(o);return o}
 function wall(x,y,z,w,h,d){box(x,y,z,w,h,d,y>3.3?mat.wallUpper:y<0?(x<0?mat.wallBasement:mat.cracked):mat.wall);solids.push({x,z,w,d,y0:y-h/2,y1:y+h/2})}
 function dividerX(x,z1,z2,openings=[],height=3.25,y0=0){let cursor=z1;for(let [a,b] of openings.sort((p,q)=>p[0]-q[0])){if(a>cursor)wall(x,y0+height/2,(cursor+a)/2,.22,height,a-cursor);wall(x,y0+(height+2.45)/2,(a+b)/2,.22,height-2.45,b-a);cursor=b}if(cursor<z2)wall(x,y0+height/2,(cursor+z2)/2,.22,height,z2-cursor)}
 function dividerZ(z,x1,x2,openings=[],height=3.25,y0=0){let cursor=x1;for(let [a,b] of openings.sort((p,q)=>p[0]-q[0])){if(a>cursor)wall((cursor+a)/2,y0+height/2,z,a-cursor,height,.22);wall((a+b)/2,y0+(height+2.45)/2,z,b-a,height-2.45,.22);cursor=b}if(cursor<x2)wall((cursor+x2)/2,y0+height/2,z,x2-cursor,height,.22)}
@@ -79,14 +95,41 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
  const pivot=new THREE.Group();
  pivot.position.set(x-(axis==='z'?half:0),y,z-(axis==='x'?half:0));scene.add(pivot);
  const alongX=axis==='z';
- box(alongX?half:0,1.15,alongX?0:half,alongX?span:thick,2.30,alongX?thick:span,mat.door,pivot);
+ const doorFace=box(alongX?half:0,1.15,alongX?0:half,alongX?span:thick,2.30,alongX?thick:span,mat.door,pivot);
+// Raised panels and a full wooden surround, on both faces of the leaf.
+for(const side of [-1,1]){
+ for(const panel of [[.73,.54,.66,.67],[.73,1.57,.66,.91]]){
+  const [mid,cy,pw,ph]=panel;
+  if(alongX){
+   box(mid,cy,side*(thick/2+.013),pw,ph,.026,mat.dark,pivot);
+   box(mid,cy,side*(thick/2+.03),pw-.11,ph-.12,.012,mat.door,pivot);
+  }else{
+   box(side*(thick/2+.013),cy,mid,.026,ph,pw,mat.dark,pivot);
+   box(side*(thick/2+.03),cy,mid,.012,ph-.12,pw-.11,mat.door,pivot);
+  }
+ }
+}
  const handle=box(alongX?span-.18:.12,1.05,alongX?.12:span-.18,.13,.11,.13,mat.brass,pivot);
  // Model anchored at hinge, with the hinge frame kept separate from the moving leaf.
  // Use one solid, dimensionally correct door leaf. Previous GLB overlay hid this
  // mesh and caused apparent holes because the generated model was not hinged correctly.
  // Frame and leaf are distinct so opening animation rotates the entire leaf.
  // Visible jambs and header are independent from the moving door.
- const jambOffset=half+.065;
+ // Frame covers the entire reveal: no daylight between wall, jamb and door.
+ const jambOffset=half+.055;
+ const casing=mat.dark;
+ if(alongX){
+  for(const side of [-1,1]){
+   box(x+side*(half+.075),y+1.18,z,.18,2.38,.36,casing);
+   box(x,y+2.36,z,span+.32,.18,.36,casing);
+  }
+ }else{
+  for(const side of [-1,1]){
+   box(x,y+1.18,z+side*(half+.075),.36,2.38,.18,casing);
+   box(x,y+2.36,z,.36,.18,span+.32,casing);
+  }
+ }
+ const jambOffset=half+.055;
  if(alongX){box(x-jambOffset,y+1.22,z,.12,2.44,.22,mat.dark);box(x+jambOffset,y+1.22,z,.12,2.44,.22,mat.dark);box(x,y+2.4,z,span+.24,.13,.22,mat.dark)}
  else{box(x,y+1.22,z-jambOffset,.22,2.44,.12,mat.dark);box(x,y+1.22,z+jambOffset,.22,2.44,.12,mat.dark);box(x,y+2.4,z,.22,.13,span+.24,mat.dark)}
  const d={pivot,x,z,y,axis,label,required,open:false,angle:0,target:0,span,thick};doors.push(d);
@@ -176,7 +219,7 @@ for(const [x,z] of [[-6,-6],[6,-6],[-6,7],[6,7],[0,-5]]){
  box(x,-.55,z,.42,.12,.42,mat.iron)
 }
 // Upper floor above hall and bedroom; stairwell void in southwest back.
-box(0,3.2,-5.5,18,.24,13,mat.floor);box(3,3.2,7,12,.24,10,mat.floor);box(0,6.55,0,18,.25,24,mat.plaster);dividerX(-3,-12,1,[[-7,-5]],3.2,3.2);dividerX(3,-12,12,[[6,8]],3.2,3.2);dividerZ(1,-9,-3,[],3.2,3.2);dividerZ(1,3,9,[[5.1,6.9]],3.2,3.2);dividerZ(-2.4,3,9,[[5.2,6.9]],3.2,3.2);dividerZ(-1.8,-9,-3,[[-6.9,-5.2]],3.2,3.2);wall(-9,4.8,0,.3,3.2,24);wall(9,4.8,0,.3,3.2,24);wall(0,4.8,-12,18,3.2,.3);wall(0,4.8,12,18,3.2,.3);
+box(0,3.2,-5.5,18,.24,13,mat.floor);box(3,3.2,7,12,.24,10,mat.floor);box(0,6.55,0,18,.25,24,ceilingMat);dividerX(-3,-12,1,[[-7,-5]],3.2,3.2);dividerX(3,-12,12,[[6,8]],3.2,3.2);dividerZ(1,-9,-3,[],3.2,3.2);dividerZ(1,3,9,[[5.1,6.9]],3.2,3.2);dividerZ(-2.4,3,9,[[5.2,6.9]],3.2,3.2);dividerZ(-1.8,-9,-3,[[-6.9,-5.2]],3.2,3.2);wall(-9,4.8,0,.3,3.2,24);wall(9,4.8,0,.3,3.2,24);wall(0,4.8,-12,18,3.2,.3);wall(0,4.8,12,18,3.2,.3);
 // Staircase 16 solid steps: ascending toward negative z. Stair opening x=-3 at z 6..8.
 for(let i=0;i<16;i++){const z=10-(i+.5)*.5,h=(i+1)*.2;box(-6,h/2,z,2.35,h,.49,mat.wood)}box(-7.35,1.75,6,.1,3.3,8.5,mat.dark);for(let i=0;i<6;i++)box(-7.3,.8+i*.45,10-i*1.3,.11,1.5,.11,mat.wood);
 const exit=makeDoor(0,-11.9,'z','Главный выход','',()=>{if(!keys.has('ключ выхода')){notice('Нужен ключ выхода');return}if(!fuse){notice('Электронный замок без питания. Найди предохранитель');return}won=true;active=false;$('#victory').style.display='flex'});
@@ -196,7 +239,7 @@ furniture('sofa',0,-2.5);furniture('rug',0,-3.4);furniture('picture',2.85,4,Math
 for(let [x,y,z] of [[0,2.85,1],[-6,2.8,-6],[6,2.8,-6],[6,5.95,7]])lamp(x,y,z,3);
 // Architecture detailing: baseboards, crown moulding, wall sconces and room-specific clutter.
 const trimMat=pbr('dark_walnut',1,1);
-const ceilingMat=pbr('cracked_plaster',2,2,{normalStrength:.4});
+
 function trimX(x1,x2,z,y){box((x1+x2)/2,y,z,x2-x1,.13,.085,trimMat)}
 function trimZ(x,z1,z2,y){box(x,y,(z1+z2)/2,.085,.13,z2-z1,trimMat)}
 for(const h of [0,3.2]){
