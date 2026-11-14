@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#080a0d"><title>THE HOUSE</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050607;color:#e6ded1;font-family:Georgia,serif}canvas{display:block;touch-action:none}#ui{position:fixed;inset:0;pointer-events:none}#hud{position:absolute;top:16px;left:18px;font-size:12px;letter-spacing:3px;text-shadow:0 2px 8px black}#room{position:absolute;top:37px;left:18px;color:#c2b6a3;font:12px Arial}#hint{position:absolute;bottom:115px;left:50%;transform:translateX(-50%);text-align:center;color:#d9d0c1;font:13px Arial;text-shadow:0 2px 6px #000}#cross{position:absolute;left:50%;top:50%;width:4px;height:4px;border:1px solid #d5d1c4;border-radius:50%;opacity:.6}#joystick{position:absolute;bottom:28px;left:24px;width:126px;height:126px;border-radius:50%;background:#ffffff12;border:1px solid #ffffff36;pointer-events:auto;touch-action:none}#nub{position:absolute;left:42px;top:42px;width:42px;height:42px;border-radius:50%;background:#ffffff48;border:1px solid #ffffff77}#actions{position:absolute;bottom:38px;right:24px;display:flex;gap:12px;pointer-events:auto}button{width:65px;height:65px;border-radius:50%;border:1px solid #ffffff6b;background:#111b;color:#eee;font-size:25px;touch-action:manipulation}#intro{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(#1e1b19,#030405 75%);pointer-events:auto;text-align:center}#intro h1{font-size:clamp(36px,9vw,75px);letter-spacing:9px;font-weight:normal;margin:0}#intro p{font:13px/1.8 Arial;color:#aaa;max-width:320px;margin:22px auto}#intro button{width:auto;height:auto;padding:14px 38px;border-radius:2px;font:15px Georgia;letter-spacing:3px}#load{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font:14px Arial;color:#aaa}#vignette{position:absolute;inset:0;background:radial-gradient(ellipse,transparent 42%,#0009);pointer-events:none}
+</style></head><body><div id="load">Загрузка дома…</div><div id="ui" style="display:none"><div id="vignette"></div><div id="hud">THE HOUSE</div><div id="room">Прихожая</div><div id="cross"></div><div id="hint">Осмотритесь. Найдите путь вниз.</div><div id="joystick"><div id="nub"></div></div><div id="actions"><button id="lamp" aria-label="Фонарь">☼</button><button id="use" aria-label="Взаимодействовать">✋</button></div></div><div id="intro" style="display:none"><div><h1>THE HOUSE</h1><p>Заброшенный дом. Два этажа и подвал. Исследуйте комнаты, открывайте двери и спускайтесь в темноту.</p><button id="start">ВОЙТИ</button><p>Телефон: левый круг — движение, правая часть экрана — обзор. ПК: WASD, мышь, E, F.</p></div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x090a0a);scene.fog=new THREE.FogExp2(0x090a0a,.027);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.88;document.body.prepend(renderer.domElement);
+const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.07,95);camera.rotation.order='YXZ';camera.position.set(0,1.65,7);
+scene.add(new THREE.HemisphereLight(0x8c9fb3,0x18110b,.22));
+const ambient=new THREE.AmbientLight(0x6d7884,.12);scene.add(ambient);
+const torch=new THREE.SpotLight(0xffe5b4,13,19,Math.PI/7,.52,1.35);torch.castShadow=true;torch.shadow.mapSize.set(512,512);torch.shadow.bias=-.0005;camera.add(torch);torch.position.set(.15,-.1,.2);const target=new THREE.Object3D();target.position.set(0,-.08,-6);camera.add(target);torch.target=target;scene.add(camera);let torchOn=true;
+const mats={wall:new THREE.MeshStandardMaterial({color:0x726c61,roughness:.96}),floor:new THREE.MeshStandardMaterial({color:0x39281d,roughness:.76}),ceiling:new THREE.MeshStandardMaterial({color:0x3f3d37,roughness:.96}),trim:new THREE.MeshStandardMaterial({color:0x241b17,roughness:.8}),wood:new THREE.MeshStandardMaterial({color:0x4a2d20,roughness:.67}),dark:new THREE.MeshStandardMaterial({color:0x18130f,roughness:.7}),cloth:new THREE.MeshStandardMaterial({color:0x454036,roughness:1}),metal:new THREE.MeshStandardMaterial({color:0x363a39,metalness:.68,roughness:.42}),glass:new THREE.MeshPhysicalMaterial({color:0x58626a,metalness:.05,roughness:.2,transmission:.22}),paper:new THREE.MeshStandardMaterial({color:0x8d8069,roughness:1}),tile:new THREE.MeshStandardMaterial({color:0x4d4c46,roughness:.87})};
+const colliders=[],doors=[],areas=[];const geo=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+function box(x,y,z,w,h,d,mat,solid=false){const m=new THREE.Mesh(geo(w,h,d),mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);if(solid)colliders.push({x,z,w,d});return m}
+function beam(x,z,dx,dz,y=0){const l=Math.hypot(dx,dz);const b=box(x+dx/2,y+1.45,z+dz/2,l,2.9,.17,mats.wall,true);b.rotation.y=-Math.atan2(dz,dx);colliders.pop();if(Math.abs(dx)>Math.abs(dz))colliders.push({x:x+dx/2,z:z+dz/2,w:l,d:.17});else colliders.push({x:x+dx/2,z:z+dz/2,w:.17,d:l});return b}
+function wallX(x1,x2,z,holes=[],y=0){let last=x1;for(const h of holes){if(h[0]>last)beam(last,z,h[0]-last,0,y);const cx=(h[0]+h[1])/2;box(cx,y+2.65,z,h[1]-h[0],.5,.18,mats.wall);last=h[1]}if(last<x2)beam(last,z,x2-last,0,y)}
+function wallZ(z1,z2,x,holes=[],y=0){let last=z1;for(const h of holes){if(h[0]>last)beam(x,last,0,h[0]-last,y);box(x,y+2.65,(h[0]+h[1])/2,.18,.5,h[1]-h[0],mats.wall);last=h[1]}if(last<z2)beam(x,last,0,z2-last,y)}
+function door(x,z,axis='x',level=0){const pivot=new THREE.Group();pivot.position.set(x,z===null?level+.15:level+.15,z??0);scene.add(pivot);const panel=new THREE.Mesh(geo(axis==='x'?1.15:.085,2.22,axis==='x'?.085:1.15),mats.wood);panel.position.set(axis==='x'?.575:0,1.11,axis==='x'?0:.575);panel.castShadow=true;pivot.add(panel);const knob=new THREE.Mesh(new THREE.SphereGeometry(.065,8,8),mats.metal);knob.position.set(axis==='x'?1.01:.08,1.08,axis==='x'?.08:1.01);pivot.add(knob);doors.push({pivot,open:false,x,z:z??0,level});return pivot}
+function furniture(kind,x,z,angle=0,y=0){const group=new THREE.Group();group.position.set(x,y,z);group.rotation.y=angle;scene.add(group);const add=(w,h,d,px,py,pz,mat)=>{const m=new THREE.Mesh(geo(w,h,d),mat);m.position.set(px,py,pz);m.castShadow=true;m.receiveShadow=true;group.add(m)};
+if(kind==='table'){add(2,.12,1.2,0,.77,0,mats.wood);for(const i of [-.8,.8])for(const j of [-.43,.43])add(.1,.72,.1,i,.37,j,mats.dark)}
+if(kind==='chair'){add(.55,.09,.55,0,.48,0,mats.wood);add(.55,.95,.09,0,.95,.25,mats.wood);for(const i of [-.2,.2])for(const j of [-.2,.2])add(.07,.47,.07,i,.23,j,mats.dark)}
+if(kind==='shelf'){add(1.8,2.35,.35,0,1.175,0,mats.dark);for(let j=0;j<5;j++){add(1.65,.06,.38,0,.28+j*.46,.01,mats.wood);for(let i=0;i<12;i++){const h=.19+Math.random()*.2;add(.08,h,.21,-.73+i*.13,.32+j*.46+h/2,.01,[mats.paper,mats.wood,mats.cloth][i%3])}}}
+if(kind==='bed'){add(1.8,.35,2.25,0,.38,0,mats.wood);add(1.7,.18,2.08,0,.65,0,mats.cloth);add(1.8,1.2,.16,0,.8,1.11,mats.dark);add(.72,.15,.48,-.4,.81,.73,mats.paper);add(.72,.15,.48,.4,.81,.73,mats.paper)}
+if(kind==='sofa'){add(2.25,.53,.86,0,.45,0,mats.cloth);add(2.25,.73,.2,0,.87,.34,mats.cloth);add(.22,.65,.86,-1.12,.64,0,mats.wood);add(.22,.65,.86,1.12,.64,0,mats.wood)}
+if(kind==='cabinet'){add(1.65,1.9,.58,0,.95,0,mats.wood);add(.04,1.68,.05,0,.96,-.32,mats.dark);add(.07,.12,.08,-.16,1,-.35,mats.metal);add(.07,.12,.08,.16,1,-.35,mats.metal)}
+if(kind==='piano'){add(2.1,.9,.65,0,.7,0,mats.dark);add(2.05,.08,.45,0,.83,-.46,mats.paper);for(let i=0;i<21;i++)add(.085,.025,.3,-.94+i*.093,.87,-.49,mats.paper);add(1.6,.5,.35,0,.25,-.9,mats.dark)}
+if(kind==='boiler'){add(1.2,2.2,1.1,0,1.1,0,mats.metal);add(.7,.2,.12,0,1.6,-.57,mats.dark);add(.22,.22,.16,0,1.1,-.59,mats.paper)}
+}
+const floors=[0,3.35,-3.35];for(const y of floors){box(0,y-.15,0,24,.3,24,y<0?mats.tile:mats.floor);box(0,y+2.98,0,24,.16,24,mats.ceiling)}
+// Ground floor: intentionally asymmetric partitions, with connecting openings.
+wallX(-12,12,-12);wallX(-12,12,12);wallZ(-12,12,-12);wallZ(-12,12,12);
+wallX(-12,2,-3.1,[[-4.2,-2.9]]);door(-4.2,-3.1,'x');
+wallX(2,12,-5.5,[[6.2,7.5]]);door(6.2,-5.5,'x');
+wallZ(-12,12,2,[[-.8,.5],[7.1,8.4]]);door(2,-.8,'z');door(2,7.1,'z');
+wallZ(-12,3,-6,[[-8.7,-7.4]]);door(-6,-8.7,'z');
+wallX(-12,2,4.8,[[-8.2,-6.9]]);door(-8.2,4.8,'x');
+wallX(2,12,4.1,[[7.2,8.5]]);door(7.2,4.1,'x');
+wallZ(4.1,12,7,[[7.3,8.6]]);door(7,7.3,'z');
+furniture('table',-8,-8,0);furniture('chair',-9,-7);furniture('chair',-7,-7);furniture('cabinet',-10.7,-5);
+furniture('shelf',-10,1);furniture('shelf',-7,1);furniture('sofa',-1.5,1.9);furniture('table',-1,3.5);
+furniture('table',7,-8);furniture('cabinet',10,-10);furniture('piano',9,8,Math.PI/2);furniture('chair',4,8);
+furniture('shelf',-10,9);furniture('shelf',-8,9);furniture('table',-3,9);
+// Upper floor
+for(const [a,b,c] of [[-12,12,-12],[-12,12,12]])wallX(a,b,c,[],3.35);wallZ(-12,12,-12,[],3.35);wallZ(-12,12,12,[],3.35);
+wallX(-12,12,0,[[-7,-5.8],[4.5,5.7]],3.35);door(-7,0,'x',3.35);door(4.5,0,'x',3.35);
+wallZ(-12,0,0,[[-6.7,-5.5]],3.35);door(0,-6.7,'z',3.35);
+wallZ(0,12,-3,[[5.2,6.4]],3.35);door(-3,5.2,'z',3.35);
+wallZ(0,12,6,[[5.5,6.7]],3.35);door(6,5.5,'z',3.35);
+furniture('bed',-7,-7,0,3.35);furniture('cabinet',-10,-8,0,3.35);furniture('bed',6,-7,0,3.35);furniture('cabinet',9,-9,0,3.35);furniture('bed',-8,7,0,3.35);furniture('shelf',0,8,0,3.35);furniture('table',9,8,0,3.35);
+// Basement
+wallX(-12,12,-12,[],-3.35);wallX(-12,12,12,[],-3.35);wallZ(-12,12,-12,[],-3.35);wallZ(-12,12,12,[],-3.35);
+wallX(-12,12,-2.5,[[-5,-3.8],[6,7.2]],-3.35);door(-5,-2.5,'x',-3.35);door(6,-2.5,'x',-3.35);
+wallZ(-12,12,1.4,[[-8,-6.8],[3.5,4.7]],-3.35);door(1.4,-8,'z',-3.35);door(1.4,3.5,'z',-3.35);
+furniture('boiler',-8,-8,0,-3.35);furniture('boiler',-5,-8,0,-3.35);furniture('shelf',8,-8,0,-3.35);furniture('table',-7,7,0,-3.35);furniture('cabinet',7,7,0,-3.35);
+// Stairwells: solid wooden treads, climb by stepping into the stair corridor.
+for(let i=0;i<18;i++){box(10.6,.11+i*.186,2.8-i*.42,2.2,.18,.42,mats.wood);box(-10.5,-3.24+i*.186,3.7-i*.42,2.2,.18,.42,mats.wood)}
+function lamps(x,y,z){const p=new THREE.PointLight(0xffb877,1.35,7,2);p.position.set(x,y+2.4,z);scene.add(p);const bulb=new THREE.Mesh(new THREE.SphereGeometry(.09,10,8),new THREE.MeshBasicMaterial({color:0xe6ad6a}));bulb.position.copy(p.position);scene.add(bulb)}
+lamps(-7,0,-7);lamps(-2,0,1);lamps(7,0,7);lamps(6,3.35,-7);lamps(-7,3.35,6);lamps(-7,-3.35,-8);
+areas.push({name:'Прихожая',x:0,z:7},{name:'Библиотека',x:-8,z:9},{name:'Столовая',x:-8,z:-8},{name:'Музыкальная комната',x:9,z:8},{name:'Кухня',x:8,z:-8},{name:'Гостиная',x:-2,z:1});
+const keys={},move={x:0,y:0};let yaw=0,pitch=0,drag=null,active=false,last=performance.now(),bob=0;const ui=document.querySelector('#ui');
+function updateRoom(){let best=1e9,name='Коридор';if(camera.position.y<-.5)name='Подвал';else if(camera.position.y>2.6)name='Второй этаж';else for(const a of areas){const d=Math.hypot(camera.position.x-a.x,camera.position.z-a.z);if(d<best){best=d;name=a.name}}document.querySelector('#room').textContent=name}
+function collision(x,z){if(Math.abs(x)>11.65||Math.abs(z)>11.65)return true;for(const c of colliders){if(Math.abs(x-c.x)<c.w/2+.29&&Math.abs(z-c.z)<c.d/2+.29)return true}return false}
+function interact(){let nearest=null,dist=2.3;for(const d of doors){if(Math.abs(camera.position.y-d.level-1.65)>2)continue;const dd=Math.hypot(camera.position.x-d.x,camera.position.z-d.z);if(dd<dist){nearest=d;dist=dd}}if(nearest){nearest.open=!nearest.open;nearest.pivot.rotation.y=nearest.open?Math.PI*.52:0;document.querySelector('#hint').textContent=nearest.open?'Дверь открыта':'Дверь закрыта'}else document.querySelector('#hint').textContent='Подойдите ближе к двери'}
+function toggleTorch(){torchOn=!torchOn;torch.intensity=torchOn?13:0}
+document.querySelector('#use').onclick=interact;document.querySelector('#lamp').onclick=toggleTorch;
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyE')interact();if(e.code==='KeyF')toggleTorch()});addEventListener('keyup',e=>keys[e.code]=false);
+const joy=document.querySelector('#joystick'),nub=document.querySelector('#nub');function joymove(e){const r=joy.getBoundingClientRect();const x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2),l=Math.max(1,Math.hypot(x,y)),s=Math.min(43,l);move.x=x/l*s/43;move.y=y/l*s/43;nub.style.transform='translate('+move.x*43+'px,'+move.y*43+'px)'}
+joy.addEventListener('pointerdown',e=>{joy.setPointerCapture(e.pointerId);joymove(e)});joy.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')joymove(e)});function joyend(){move.x=move.y=0;nub.style.transform=''}joy.addEventListener('pointerup',joyend);joy.addEventListener('pointercancel',joyend);
+renderer.domElement.addEventListener('pointerdown',e=>{if(!active)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;yaw-=dx*.0035;pitch=Math.max(-1.3,Math.min(1.3,pitch-dy*.0035))});renderer.domElement.addEventListener('pointerup',()=>drag=null);
+document.querySelector('#start').onclick=()=>{active=true;document.querySelector('#intro').style.display='none';ui.style.display='block'};
+function animate(t){requestAnimationFrame(animate);const dt=Math.min((t-last)/1000,.05);last=t;if(active){let f=Number(!!keys.KeyW)-Number(!!keys.KeyS)-move.y,s=Number(!!keys.KeyD)-Number(!!keys.KeyA)+move.x;const len=Math.hypot(f,s);if(len>.1){f/=Math.max(1,len);s/=Math.max(1,len);const speed=(keys.ShiftLeft?3.7:2.4)*dt;const dx=(Math.sin(yaw)*f+Math.cos(yaw)*s)*speed,dz=(-Math.cos(yaw)*f+Math.sin(yaw)*s)*speed;const x=camera.position.x+dx,z=camera.position.z+dz;if(!collision(x,camera.position.z))camera.position.x=x;if(!collision(camera.position.x,z))camera.position.z=z;bob+=dt*10}else bob=0;
+const x=camera.position.x,z=camera.position.z;let floor=0;if(x>9.3&&z<3.3&&z>-4.5){floor=Math.min(3.35,Math.max(0,(2.8-z)/7.56*3.35))}else if(x< -9.2&&z<4.1&&z>-4.1){floor=Math.max(-3.35,Math.min(0,-3.35+(3.7-z)/7.56*3.35))}else if(camera.position.y>2.6)floor=3.35;else if(camera.position.y<-.5)floor=-3.35;camera.position.y+=(floor+1.65+Math.sin(bob)*.025-camera.position.y)*Math.min(1,dt*9);camera.rotation.set(pitch,yaw,0);updateRoom()}renderer.render(scene,camera)}
+requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});document.querySelector('#load').remove();document.querySelector('#intro').style.display='flex';
+</script></body></html>
