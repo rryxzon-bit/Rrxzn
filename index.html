@@ -271,8 +271,8 @@ for(let yy=0;yy<128;yy++)for(let xx=0;xx<128;xx++){
 }
 grainCtx.putImageData(grainImg,0,0);
 const woodBump=new THREE.CanvasTexture(grainCanvas);woodBump.wrapS=woodBump.wrapT=THREE.RepeatWrapping;woodBump.repeat.set(2,3);
-const carvedOak=new THREE.MeshPhysicalMaterial({color:0x4e3625,roughness:.88,clearcoat:.025,clearcoatRoughness:.92,bumpMap:woodBump,bumpScale:.035});
-const oldLeather=new THREE.MeshPhysicalMaterial({color:0x392d25,roughness:.96,clearcoat:0});
+const carvedOak=mat.dark.clone();carvedOak.color.setHex(0xbfa18b);carvedOak.roughness=.92;carvedOak.metalness=0;
+const oldLeather=mat.cloth.clone();oldLeather.color.setHex(0x977e72);oldLeather.roughness=.97;oldLeather.metalness=0;
 function sculptedFurniture(kind,g){
  const add=(geometry,material,x,y,z,rx=0,ry=0,rz=0)=>{
   const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);m.rotation.set(rx,ry,rz);m.castShadow=true;m.receiveShadow=true;g.add(m);return m;
@@ -285,9 +285,10 @@ function sculptedFurniture(kind,g){
  if(kind==='chair'){
   // Victorian dining chair: four tapered turned legs, sculpted seat,
   // two tall posts, curved crest rail, upholstered back and carved splats.
-  const chairOak=new THREE.MeshStandardMaterial({color:0x4d3020,roughness:.9,metalness:0,bumpMap:woodBump,bumpScale:.013});
-  const trimOak=new THREE.MeshStandardMaterial({color:0x755038,roughness:.85,metalness:0});
-  const velvet=new THREE.MeshStandardMaterial({color:0x46352e,roughness:1});
+  // Use real tiled PBR wood maps rather than plain coloured primitives.
+  const chairOak=mat.dark.clone();chairOak.color.setHex(0xc6a18a);chairOak.roughness=.91;chairOak.metalness=0;
+  const trimOak=mat.wood.clone();trimOak.color.setHex(0xb08a72);trimOak.roughness=.9;trimOak.metalness=0;
+  const velvet=mat.cloth.clone();velvet.color.setHex(0x987c70);velvet.roughness=1;velvet.metalness=0;
   const beam=(w,h,d,x,y,z,material=chairOak)=>add(new THREE.BoxGeometry(w,h,d),material,x,y,z);
   for(const xx of [-.245,.245])for(const zz of [-.225,.225]){
    const leg=add(new THREE.CylinderGeometry(.051,.029,.45,10),chairOak,xx,.225,zz);
@@ -361,7 +362,10 @@ if(kind==='cabinet'||kind==='wardrobe'){
 if(kind==='bed'){b(0,.35,0,1.65,.3,2.5,mat.dark);b(0,.56,0,1.5,.2,2.25,mat.cloth);b(0,.87,-1.2,1.65,1.1,.16,mat.iron);b(0,.73,-.85,1.28,.16,.55,mat.paper)}if(kind==='sofa'){b(0,.54,0,2.1,.68,.88,mat.cloth);b(0,1.04,.39,2.1,1,.2,mat.cloth);for(let a of [-.95,.95])b(a,.79,0,.23,.66,.9,mat.cloth)}if(kind==='shelf'){b(0,1.05,0,1.5,2.1,.4,mat.dark);for(let h of [.35,.8,1.25,1.7])b(0,h,.03,1.46,.08,.43,mat.wood);for(let i=0;i<11;i++)b(-.58+(i%5)*.29,.49+Math.floor(i/5)*.48,.02,.12,.24,.24,i%2?mat.red:mat.paper)}if(kind==='rug')b(0,.025,0,2.7,.035,3.5,mat.red);if(kind==='picture'){b(0,1.95,0,1.2,.88,.09,mat.brass);b(0,1.95,.06,1.04,.72,.025,mat.red);b(-.18,1.95,.075,.34,.48,.01,mat.dark)}if(kind==='crate'){b(0,.38,0,.8,.76,.8,mat.wood);b(0,.7,.42,.8,.1,.06,mat.dark)}if(kind==='piano'){b(0,.9,0,2.1,.45,1.25,mat.dark);b(0,1.38,-.55,2.1,.75,.15,mat.dark);b(0,1.09,.42,1.82,.07,.32,mat.paper)}}
 // Never overlay imported furniture on top of the procedural furniture.
 // If a detailed GLB exists, it replaces the old mesh entirely.
-if(furnishingAssets[kind]){const [path,dimensions]=furnishingAssets[kind];mountModel(path,g,dimensions,[0,0,0],0,true)}
+if(furnishingAssets[kind] && kind!=='chair' && kind!=='table' && kind!=='desk'){
+ const [path,dimensions]=furnishingAssets[kind];
+ mountModel(path,g,dimensions,[0,0,0],0,true);
+}
 return g}
 // Ground floor: central hall, living room, kitchen, study, stairwell.
 // Ground slab split around a real basement stairwell (x ±1.35, z 3..10).
