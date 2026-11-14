@@ -132,6 +132,17 @@ for(const side of [-1,1]){
    box(x,y+2.43,z,.40,.18,span+.38,casing);
   }
  }
+ // Fill the structural opening up to the jamb. Door leaves are 1.48m wide,
+ // while wall openings are 1.7–2.0m; trim alone cannot seal that gap.
+ const openingHalf=alongX?.86:1.0;
+ const fillerWidth=Math.max(.08,openingHalf-(half+.04));
+ for(const side of [-1,1]){
+  const offset=side*(half+.04+fillerWidth/2);
+  const fx=alongX?x+offset:x, fz=alongX?z:z+offset;
+  const fw=alongX?fillerWidth:.24,fd=alongX?.24:fillerWidth;
+  box(fx,y+1.225,fz,fw,2.45,fd,mat.wall);
+  solids.push({x:fx,z:fz,w:fw,d:fd,y0:y,y1:y+2.45});
+ }
  const jambOffset=half+.055;
  if(alongX){box(x-jambOffset,y+1.22,z,.12,2.44,.22,mat.dark);box(x+jambOffset,y+1.22,z,.12,2.44,.22,mat.dark);box(x,y+2.43,z,span+.32,.17,.30,mat.dark)}
  else{box(x,y+1.22,z-jambOffset,.22,2.44,.12,mat.dark);box(x,y+1.22,z+jambOffset,.22,2.44,.12,mat.dark);box(x,y+2.43,z,.30,.17,span+.32,mat.dark)}
