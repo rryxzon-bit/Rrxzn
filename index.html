@@ -159,8 +159,8 @@ function doorHitsPlayer(d,angle=d.angle,x=px,z=pz){
  // Distance to the rotating door segment in the horizontal plane.
  const sx=d.pivot.position.x,sz=d.pivot.position.z;
  const ax=d.axis==='z'?1:0,az=d.axis==='x'?1:0;
- const ex=sx+(ax*Math.cos(angle)-az*Math.sin(angle))*d.span;
- const ez=sz+(ax*Math.sin(angle)+az*Math.cos(angle))*d.span;
+ const ex=sx+(ax*Math.cos(angle)+az*Math.sin(angle))*d.span;
+ const ez=sz+(-ax*Math.sin(angle)+az*Math.cos(angle))*d.span;
  const vx=ex-sx,vz=ez-sz,den=vx*vx+vz*vz;
  const t=Math.max(0,Math.min(1,((x-sx)*vx+(z-sz)*vz)/den));
  return Math.hypot(x-(sx+t*vx),z-(sz+t*vz))<.29+d.thick/2;
@@ -170,8 +170,8 @@ function doorBlocked(d,nextAngle){
  if(Math.abs(py-(d.y+1.65))<1.55 && doorHitsPlayer(d,nextAngle))return true;
  const sx=d.pivot.position.x,sz=d.pivot.position.z;
  const ax=d.axis==='z'?1:0,az=d.axis==='x'?1:0;
- const vx=(ax*Math.cos(nextAngle)-az*Math.sin(nextAngle))*d.span;
- const vz=(ax*Math.sin(nextAngle)+az*Math.cos(nextAngle))*d.span;
+ const vx=(ax*Math.cos(nextAngle)+az*Math.sin(nextAngle))*d.span;
+ const vz=(-ax*Math.sin(nextAngle)+az*Math.cos(nextAngle))*d.span;
  for(const f of furnitureColliders){
   if(f.y1<d.y+.12||f.y0>d.y+2.3)continue;
   // Sample the door leaf across its sweep; cheap and sufficient for small mobile scenes.
