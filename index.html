@@ -7,9 +7,9 @@ window.addEventListener('unhandledrejection',function(e){console.warn('Game load
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s),scene=new THREE.Scene();scene.background=new THREE.Color(0x151310);scene.fog=new THREE.Fog(0x151310,15,37);
-const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,.85));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.04;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.prepend(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,.85));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.04;renderer.shadowMap.enabled=false; // mobile: shadow maps cost ~half the frame ratedocument.body.prepend(renderer.domElement);
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.07,65);camera.rotation.order='YXZ';scene.add(camera);
-scene.add(new THREE.HemisphereLight(0x8e9aa4,0x19130f,.42));scene.add(new THREE.AmbientLight(0x897968,.13));
+scene.add(new THREE.HemisphereLight(0x8e9aa4,0x19130f,.34));scene.add(new THREE.AmbientLight(0x897968,.095));
 // Full texture-backed PBR materials. All maps are stored locally in assets/pbr.
 const textureLoader=new THREE.TextureLoader();const assetAudit={texturesLoaded:0,texturesFailed:[],modelsLoaded:0,modelsFailed:[]};window.__THE_HOUSE_ASSETS=assetAudit;
 window.addEventListener('error',e=>console.error('THE HOUSE runtime error',e.message));
@@ -245,7 +245,7 @@ function doorBlocked(d,nextAngle){
  }
  return false;
 }
-function lamp(x,y,z,brightness=6){const bulb=new THREE.PointLight(0xffc18a,brightness*.52,7.5,2);bulb.position.set(x,y,z);scene.add(bulb);lights.push(bulb);box(x,y+.12,z,.4,.18,.4,mat.brass);let shade=new THREE.Mesh(new THREE.ConeGeometry(.38,.26,12),mat.paper);shade.rotation.x=Math.PI;shade.position.set(x,y-.12,z);scene.add(shade)}
+function lamp(x,y,z,brightness=6){const bulb=new THREE.PointLight(0xffc18a,brightness*.42,6.5,2);bulb.position.set(x,y,z);scene.add(bulb);lights.push(bulb);box(x,y+.12,z,.4,.18,.4,mat.brass);let shade=new THREE.Mesh(new THREE.ConeGeometry(.38,.26,12),mat.paper);shade.rotation.x=Math.PI;shade.position.set(x,y-.12,z);scene.add(shade)}
 // Sculpted meshes (not billboard textures): turned legs, curved chair backs and bevelled table edges.
 const grainCanvas=document.createElement('canvas');grainCanvas.width=128;grainCanvas.height=128;
 const grainCtx=grainCanvas.getContext('2d'),grainImg=grainCtx.createImageData(128,128);
@@ -255,7 +255,7 @@ for(let yy=0;yy<128;yy++)for(let xx=0;xx<128;xx++){
 }
 grainCtx.putImageData(grainImg,0,0);
 const woodBump=new THREE.CanvasTexture(grainCanvas);woodBump.wrapS=woodBump.wrapT=THREE.RepeatWrapping;woodBump.repeat.set(2,3);
-const carvedOak=new THREE.MeshPhysicalMaterial({color:0x57402d,roughness:.88,clearcoat:.025,clearcoatRoughness:.92,bumpMap:woodBump,bumpScale:.035});
+const carvedOak=new THREE.MeshPhysicalMaterial({color:0x4e3625,roughness:.88,clearcoat:.025,clearcoatRoughness:.92,bumpMap:woodBump,bumpScale:.035});
 const oldLeather=new THREE.MeshPhysicalMaterial({color:0x392d25,roughness:.96,clearcoat:0});
 function sculptedFurniture(kind,g){
  const add=(geometry,material,x,y,z,rx=0,ry=0,rz=0)=>{
@@ -486,7 +486,7 @@ for(const side of [-1,1]){
  screw.position.set(side*.086,.005,-.267);flashlight.add(screw);
 }
 flashlight.rotation.set(-.06,-.15,-.12);
-const spot=new THREE.SpotLight(0xffdfac,14.5,14,.53,.65,1.55);spot.castShadow=true;spot.shadow.mapSize.set(512,512);spot.shadow.camera.near=.12;spot.shadow.camera.far=12;spot.shadow.bias=-.0003;spot.shadow.normalBias=.025;spot.position.set(0,-.06,-.27);spot.target.position.set(0,-.04,-8);camera.add(spot,spot.target);
+const spot=new THREE.SpotLight(0xffd6a0,19,12,.34,.33,1.8);spot.castShadow=false;spot.position.set(0,-.06,-.27);spot.target.position.set(0,-.04,-8);camera.add(spot,spot.target);
 function notice(s){$('#message').textContent=s;$('#message').style.opacity='1';clearTimeout(notice.timer);notice.timer=setTimeout(()=>$('#message').style.opacity='0',2500)}function updateInventory(){$('#items').textContent='Инвентарь: '+([ ...keys,...(fuse?['предохранитель']:[])].join(', ')||'пусто');$('#objective').textContent=fuse&&keys.has('ключ выхода')?'Вернись к главному выходу':'Найди ключи и предохранитель'}
 const ray=new THREE.Raycaster();let near=null;function findNear(){ray.setFromCamera(new THREE.Vector2(0,0),camera);let best=null,bestScore=2.55;for(let o of interactions){if(o.enabled&&!o.enabled())continue;const v=new THREE.Vector3(o.x,o.y,o.z);let distance=camera.position.distanceTo(v);if(distance>2.7)continue;let direction=v.clone().sub(camera.position).normalize();let facing=direction.dot(ray.ray.direction);if(facing<.69)continue;// Block interactions through solid walls or closed doors.
 let blocked=false;const dir=v.clone().sub(camera.position);const rayToTarget=new THREE.Ray(camera.position,dir.clone().normalize());
