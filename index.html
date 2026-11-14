@@ -116,16 +116,26 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
  part(0,0,span,2.43,thick,doorWood);
  // Photographic door texture supplied by the user, without a painted-on handle.
  // The actual brass handle below remains an independent 3D object.
- const doorTexture=new THREE.TextureLoader().load('assets/pbr/victorian_door_custom.jpg');
+ const doorTexture=new THREE.TextureLoader().load('assets/pbr/aged_door_wood_basecolor.jpg');
  doorTexture.colorSpace=THREE.SRGBColorSpace;
  doorTexture.wrapS=doorTexture.wrapT=THREE.ClampToEdgeWrapping;
  doorTexture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
- const doorSurface=new THREE.MeshStandardMaterial({map:doorTexture,color:0xffffff,roughness:.96,metalness:0,side:THREE.DoubleSide});
+ const doorSurface=new THREE.MeshStandardMaterial({map:doorTexture,color:0xd9c4a6,roughness:.83,metalness:0,side:THREE.DoubleSide,emissive:0x20160d,emissiveIntensity:.22});
  for(const sign of [-1,1]){
   const panel=new THREE.Mesh(new THREE.PlaneGeometry(span-.012,2.42),doorSurface);
   if(alongX){panel.position.z=sign*(thick/2+.003);if(sign<0)panel.rotation.y=Math.PI}
   else{panel.rotation.y=sign*Math.PI/2;panel.position.x=sign*(thick/2+.003)}
   leaf.add(panel);
+ }
+ // Real raised wooden framing over the textured face: three restrained
+ // inset panels, not the previous six-panel cardboard-like decoration.
+ for(const sign of [-1,1]){
+  const face=sign*(thick/2+.016);
+  for(const cy of [-.74,0,.74]){
+   for(const u of [-.65,.65])raised(u,cy,.055,.69,.027,doorEdge,face);
+   for(const v of [cy-.32,cy+.32])raised(0,v,1.33,.047,.027,doorEdge,face);
+  }
+  for(const u of [-.705,.705])raised(u,0,.045,2.39,.028,doorWood,face+sign*.006);
  }
  // Antique lever handle, backplate, spindle, collar and keyhole on both sides.
  for(const faceSign of [-1,1]){
