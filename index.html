@@ -148,7 +148,14 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
   study:[0x5b3425,.76,0x29140e],entrance:[0x343b39,.96,0x151b1a],
   walnut:[0x68402d,.88,0x25180f],oak:[0xa07c56,.89,0x382515]
  }[doorVariant];
- const doorSurface=new THREE.MeshStandardMaterial({map:doorTexture,color:doorFinish[0],roughness:doorFinish[1],metalness:0,bumpMap:woodBump,bumpScale:.014,side:THREE.DoubleSide,emissive:doorFinish[2],emissiveIntensity:.13});
+ // Subtle angle-dependent varnish glint: physically based specular response,
+// not an emissive glow or an expensive screen-space reflection.
+ const doorSurface=new THREE.MeshPhysicalMaterial({
+  map:doorTexture,color:doorFinish[0],roughness:doorVariant==='cellar'?.77:.55,
+  metalness:0,bumpMap:woodBump,bumpScale:.023,
+  clearcoat:doorVariant==='cellar'?.035:.19,clearcoatRoughness:.34,
+  side:THREE.DoubleSide,emissive:doorFinish[2],emissiveIntensity:.045
+ });
  for(const sign of [-1,1]){
   const panel=new THREE.Mesh(new THREE.PlaneGeometry(span-.012,2.42),doorSurface);
   if(alongX){panel.position.z=sign*(thick/2+.003);if(sign<0)panel.rotation.y=Math.PI}
@@ -488,7 +495,7 @@ for(const side of [-1,1]){
  screw.position.set(side*.086,.005,-.267);flashlight.add(screw);
 }
 flashlight.rotation.set(-.06,-.15,-.12);
-const spot=new THREE.SpotLight(0xffe0b6,15,13,.52,.75,1.5);spot.castShadow=false;spot.position.set(0,-.06,-.27);spot.target.position.set(0,-.04,-8);camera.add(spot,spot.target);
+const spot=new THREE.SpotLight(0xffe5c4,17,13,.49,.68,1.5);spot.castShadow=false;spot.position.set(0,-.06,-.27);spot.target.position.set(0,-.04,-8);camera.add(spot,spot.target);
 function notice(s){$('#message').textContent=s;$('#message').style.opacity='1';clearTimeout(notice.timer);notice.timer=setTimeout(()=>$('#message').style.opacity='0',2500)}function updateInventory(){$('#items').textContent='Инвентарь: '+([ ...keys,...(fuse?['предохранитель']:[])].join(', ')||'пусто');$('#objective').textContent=fuse&&keys.has('ключ выхода')?'Вернись к главному выходу':'Найди ключи и предохранитель'}
 const ray=new THREE.Raycaster();let near=null;function findNear(){ray.setFromCamera(new THREE.Vector2(0,0),camera);let best=null,bestScore=2.55;for(let o of interactions){if(o.enabled&&!o.enabled())continue;const v=new THREE.Vector3(o.x,o.y,o.z);let distance=camera.position.distanceTo(v);if(distance>2.7)continue;let direction=v.clone().sub(camera.position).normalize();let facing=direction.dot(ray.ray.direction);if(facing<.69)continue;// Block interactions through solid walls or closed doors.
 let blocked=false;const dir=v.clone().sub(camera.position);const rayToTarget=new THREE.Ray(camera.position,dir.clone().normalize());
