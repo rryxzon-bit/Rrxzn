@@ -7,9 +7,10 @@ window.addEventListener('unhandledrejection',function(e){console.warn('Game load
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
 import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js';
 const $=s=>document.querySelector(s),scene=new THREE.Scene();scene.background=new THREE.Color(0x151310);scene.fog=new THREE.Fog(0x151310,15,37);
-const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,.85));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;renderer.shadowMap.enabled=false; // mobile: shadow maps cost ~half the frame ratedocument.body.prepend(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,.85));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.28;renderer.shadowMap.enabled=false; // Mobile performance: no dynamic shadow maps.
+document.body.prepend(renderer.domElement);
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.07,65);camera.rotation.order='YXZ';scene.add(camera);
-scene.add(new THREE.HemisphereLight(0xadb4b7,0x34271f,.65));scene.add(new THREE.AmbientLight(0x9b8a79,.24));
+scene.add(new THREE.HemisphereLight(0xb7b9b4,0x4b3b30,.88));scene.add(new THREE.AmbientLight(0xa69a89,.38));
 // Full texture-backed PBR materials. All maps are stored locally in assets/pbr.
 const textureLoader=new THREE.TextureLoader();const assetAudit={texturesLoaded:0,texturesFailed:[],modelsLoaded:0,modelsFailed:[]};window.__THE_HOUSE_ASSETS=assetAudit;
 window.addEventListener('error',e=>console.error('THE HOUSE runtime error',e.message));
@@ -25,9 +26,10 @@ function pbr(name,rx=1,ry=1,opts={}){
  const material=new THREE.MeshStandardMaterial({
   map:loadPBRTexture(name+'_basecolor.jpg',true,rx,ry),
   normalMap:loadPBRTexture(name+'_normal.png',false,rx,ry),
-  metalnessMap:loadPBRTexture(name+'_metallic_roughness.png',false,rx,ry),
+  // Old texture sets contain ORM-style maps; do not treat wood and plaster as metallic.
+  metalnessMap:null,
   roughnessMap:loadPBRTexture(name+'_metallic_roughness.png',false,rx,ry),
-  roughness:opts.roughness??1,metalness:opts.metalness??1,
+  roughness:opts.roughness??.92,metalness:opts.metalness??0,
   color:opts.color??0xffffff,normalScale:new THREE.Vector2(opts.normalStrength??.65,opts.normalStrength??.65)
  });
  // glTF metallic-roughness convention: green=roughness, blue=metalness.
