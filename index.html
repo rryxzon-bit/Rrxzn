@@ -99,11 +99,11 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
  pivot.position.set(x-(axis==='z'?half:0),y,z-(axis==='x'?half:0));scene.add(pivot);
  const alongX=axis==='z';
  // Victorian six-panel door with solid stiles, rails and inset moulded panels.
- const doorWood=new THREE.MeshStandardMaterial({color:0x59402e,roughness:.76,metalness:0});
- const doorInset=new THREE.MeshStandardMaterial({color:0x38271d,roughness:.87});
- const doorEdge=new THREE.MeshStandardMaterial({color:0x76563a,roughness:.65});
- const agedBrass=new THREE.MeshStandardMaterial({color:0x8b7046,metalness:.78,roughness:.38});
- const brassShadow=new THREE.MeshStandardMaterial({color:0x3c3126,metalness:.67,roughness:.62});
+ const doorWood=new THREE.MeshStandardMaterial({color:0x35271f,roughness:.93,metalness:0});
+ const doorInset=new THREE.MeshStandardMaterial({color:0x211914,roughness:.98});
+ const doorEdge=new THREE.MeshStandardMaterial({color:0x58402e,roughness:.91});
+ const agedBrass=new THREE.MeshStandardMaterial({color:0x645438,metalness:.65,roughness:.74});
+ const brassShadow=new THREE.MeshStandardMaterial({color:0x292d27,metalness:.53,roughness:.92});
  const leafCenter=alongX?new THREE.Vector3(half,1.215,0):new THREE.Vector3(0,1.215,half);
  const leaf=new THREE.Group();leaf.position.copy(leafCenter);pivot.add(leaf);
  // Construct door in local coordinates: horizontal U, vertical Y, thickness V.
@@ -125,6 +125,37 @@ function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
   // Outer raised mouldings and the middle lock rail.
   for(const u of [-.705,.705])raised(u,0,.055,2.39,.026,doorEdge,face);
   for(const v of [-1.185,-.36,.36,1.185])raised(0,v,1.40,.045,.025,doorEdge,face);
+ }
+ // Neglected, haunted-house details: worn grain, cracked panel corners,
+ // black water damage and exposed antique iron hinges. Kept low-poly for mobile.
+ const mildew=new THREE.MeshStandardMaterial({color:0x1c211b,roughness:1,transparent:true,opacity:.78,depthWrite:false});
+ const wornWood=new THREE.MeshStandardMaterial({color:0x806249,roughness:.98});
+ const rustIron=new THREE.MeshStandardMaterial({color:0x46382b,metalness:.56,roughness:.92});
+ for(const sign of [-1,1]){
+  const surface=sign*(thick/2+.048);
+  for(let i=0;i<12;i++){
+   const u=-.59+(i%6)*.21;
+   const v=-1.06+Math.floor(i/6)*1.97;
+   raised(u,v,.008,.10+(i%4)*.06,.003,i%3===0?wornWood:doorInset,surface+sign*.004);
+  }
+  // Dark vertical moisture streaks, irregularly placed near the lower edge.
+  for(let i=0;i<5;i++){
+   const u=-.55+i*.255;
+   raised(u,-1.03+(i%2)*.075,.09,.23+(i%3)*.07,.002,mildew,surface+sign*.006);
+  }
+  // Cracked corners on selected panels.
+  for(const [u,v] of [[-.53,.87],[.18,-.55],[.46,.16]]){
+   const crack=raised(u,v,.011,.21,.004,doorInset,surface+sign*.008);
+   if(alongX)crack.rotation.z=.28;else crack.rotation.x=.28;
+  }
+ }
+ // Three pairs of tarnished strap hinges on the pivot edge.
+ for(const v of [-.87,0,.87]){
+  for(const sign of [-1,1]){
+   const surface=sign*(thick/2+.054);
+   raised(-.66,v,.17,.07,.014,rustIron,surface);
+   const rivet=raised(-.61,v,.025,.025,.017,agedBrass,surface+sign*.012);
+  }
  }
  // Antique lever handle, backplate, spindle, collar and keyhole on both sides.
  for(const faceSign of [-1,1]){
