@@ -31,7 +31,7 @@ function pbr(name,rx=1,ry=1,opts={}){
  return material;
 }
 const mat={
- wall:pbr('peeling_plaster',2,1,{normalStrength:.5}),
+ wall:pbr('vintage_wallpaper_brown',2,1,{normalStrength:.35}),wallUpper:pbr('vintage_wallpaper',2,1,{normalStrength:.35}),wallBasement:pbr('stained_stone',2,2,{normalStrength:.55}),plaster:pbr('peeling_plaster',2,1,{normalStrength:.45}),cracked:pbr('cracked_plaster',2,1,{normalStrength:.5}),
  wood:pbr('aged_oak',1,1),floor:pbr('weathered_floor',3,4,{normalStrength:.5}),
  tile:pbr('old_ceramic',2,2),door:pbr('aged_door_wood'),
  dark:pbr('dark_walnut'),iron:pbr('oxidized_iron',1,1,{normalStrength:.7}),
@@ -70,7 +70,7 @@ const furnishingAssets={
 };
 const geo=new THREE.BoxGeometry(1,1,1),solids=[],furnitureColliders=[],doors=[],interactions=[],lights=[],keys=new Set();let fuse=false,won=false,flashOn=true,crouched=false,sprint=false,active=false,yaw=0,pitch=0,sensitivity=1;let px=0,pz=0,py=1.65,level=0;
 function box(x,y,z,w,h,d,m,parent=scene){let o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.scale.set(w,h,d);o.castShadow=false;o.receiveShadow=true;parent.add(o);return o}
-function wall(x,y,z,w,h,d){box(x,y,z,w,h,d,mat.wall);solids.push({x,z,w,d,y0:y-h/2,y1:y+h/2})}
+function wall(x,y,z,w,h,d){box(x,y,z,w,h,d,y>3.3?mat.wallUpper:y<0?mat.wallBasement:mat.wall);solids.push({x,z,w,d,y0:y-h/2,y1:y+h/2})}
 function dividerX(x,z1,z2,openings=[],height=3.25,y0=0){let cursor=z1;for(let [a,b] of openings.sort((p,q)=>p[0]-q[0])){if(a>cursor)wall(x,y0+height/2,(cursor+a)/2,.22,height,a-cursor);wall(x,y0+(height+2.45)/2,(a+b)/2,.22,height-2.45,b-a);cursor=b}if(cursor<z2)wall(x,y0+height/2,(cursor+z2)/2,.22,height,z2-cursor)}
 function dividerZ(z,x1,x2,openings=[],height=3.25,y0=0){let cursor=x1;for(let [a,b] of openings.sort((p,q)=>p[0]-q[0])){if(a>cursor)wall((cursor+a)/2,y0+height/2,z,a-cursor,height,.22);wall((a+b)/2,y0+(height+2.45)/2,z,b-a,height-2.45,.22);cursor=b}if(cursor<x2)wall((cursor+x2)/2,y0+height/2,z,x2-cursor,height,.22)}
 function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
@@ -176,7 +176,7 @@ for(const [x,z] of [[-6,-6],[6,-6],[-6,7],[6,7],[0,-5]]){
  box(x,-.55,z,.42,.12,.42,mat.iron)
 }
 // Upper floor above hall and bedroom; stairwell void in southwest back.
-box(0,3.2,-5.5,18,.24,13,mat.floor);box(3,3.2,7,12,.24,10,mat.floor);box(0,6.55,0,18,.25,24,mat.wall);dividerX(-3,-12,1,[[-7,-5]],3.2,3.2);dividerX(3,-12,12,[[6,8]],3.2,3.2);dividerZ(1,-9,-3,[],3.2,3.2);dividerZ(1,3,9,[[5.1,6.9]],3.2,3.2);dividerZ(-2.4,3,9,[[5.2,6.9]],3.2,3.2);dividerZ(-1.8,-9,-3,[[-6.9,-5.2]],3.2,3.2);wall(-9,4.8,0,.3,3.2,24);wall(9,4.8,0,.3,3.2,24);wall(0,4.8,-12,18,3.2,.3);wall(0,4.8,12,18,3.2,.3);
+box(0,3.2,-5.5,18,.24,13,mat.floor);box(3,3.2,7,12,.24,10,mat.floor);box(0,6.55,0,18,.25,24,mat.plaster);dividerX(-3,-12,1,[[-7,-5]],3.2,3.2);dividerX(3,-12,12,[[6,8]],3.2,3.2);dividerZ(1,-9,-3,[],3.2,3.2);dividerZ(1,3,9,[[5.1,6.9]],3.2,3.2);dividerZ(-2.4,3,9,[[5.2,6.9]],3.2,3.2);dividerZ(-1.8,-9,-3,[[-6.9,-5.2]],3.2,3.2);wall(-9,4.8,0,.3,3.2,24);wall(9,4.8,0,.3,3.2,24);wall(0,4.8,-12,18,3.2,.3);wall(0,4.8,12,18,3.2,.3);
 // Staircase 16 solid steps: ascending toward negative z. Stair opening x=-3 at z 6..8.
 for(let i=0;i<16;i++){const z=10-(i+.5)*.5,h=(i+1)*.2;box(-6,h/2,z,2.35,h,.49,mat.wood)}box(-7.35,1.75,6,.1,3.3,8.5,mat.dark);for(let i=0;i<6;i++)box(-7.3,.8+i*.45,10-i*1.3,.11,1.5,.11,mat.wood);
 const exit=makeDoor(0,-11.9,'z','Главный выход','',()=>{if(!keys.has('ключ выхода')){notice('Нужен ключ выхода');return}if(!fuse){notice('Электронный замок без питания. Найди предохранитель');return}won=true;active=false;$('#victory').style.display='flex'});
