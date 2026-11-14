@@ -340,8 +340,8 @@ if(bounds[kind]){const [w,d]=bounds[kind],c=Math.abs(Math.cos(angle)),si=Math.ab
 let g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=angle;scene.add(g);const b=(a,c,d,w,h,dep,m)=>box(a,c,d,w,h,dep,m,g);if(!sculptedFurniture(kind,g)){
 if(kind==='cabinet'||kind==='wardrobe'){
  const tall=kind==='wardrobe',h=tall?2.15:1.4,w=tall?1.8:1.4,dep=.65;
- const oak=mat.dark.clone();oak.color.setHex(tall?0xc1a28a:0xd0ad8c);oak.roughness=.91;
- const panel=mat.wood.clone();panel.color.setHex(0xa9876b);panel.roughness=.93;
+ const oak=mat.dark.clone();oak.color.setHex(tall?0xd8c3ad:0xe1c8b0);oak.roughness=.92;oak.metalness=0;
+ const panel=mat.wood.clone();panel.color.setHex(0xd7bca1);panel.roughness=.94;panel.metalness=0;
  const bronze=new THREE.MeshStandardMaterial({color:0x716045,metalness:.58,roughness:.7});
  // Hollow cabinet shell: back, side walls, top, bottom and real interior shelves.
  b(0,h/2,-dep/2+.035,w-.1,h-.15,.07,oak);
@@ -361,18 +361,28 @@ if(kind==='cabinet'||kind==='wardrobe'){
   doorBox(-sx*(dw-.13),h*.52,.085,.035,.12,.05,bronze);
   const entry={hinge,open:false,target:0,angle:0,side:sx};
   cabinetDoors.push(entry);
-  const front=new THREE.Vector3(-sx*(dw-.13),h*.52,dep/2+.13);
+  const front=new THREE.Vector3(sx*(half-dw+.13),h*.52,dep/2+.17);
   g.updateMatrixWorld(true);const world=g.localToWorld(front.clone());
   interactions.push({x:world.x,y:world.y,z:world.z,label:(tall?'Шкаф':'Шкафчик')+' — открыть/закрыть',enabled:()=>true,action:()=>{
-   entry.open=!entry.open;entry.target=entry.open?-sx*1.55:0;
+   entry.open=!entry.open;entry.target=entry.open?sx*1.55:0;notice(entry.open?'Шкаф открыт':'Шкаф закрыт');
   }});
  }
  for(const sx of [-1,1])b(sx*(w/2-.14),.04,0,.12,.08,.48,oak);
 }
-if(kind==='bed'){b(0,.35,0,1.65,.3,2.5,mat.dark);b(0,.56,0,1.5,.2,2.25,mat.cloth);b(0,.87,-1.2,1.65,1.1,.16,mat.iron);b(0,.73,-.85,1.28,.16,.55,mat.paper)}if(kind==='sofa'){b(0,.54,0,2.1,.68,.88,mat.cloth);b(0,1.04,.39,2.1,1,.2,mat.cloth);for(let a of [-.95,.95])b(a,.79,0,.23,.66,.9,mat.cloth)}if(kind==='shelf'){b(0,1.05,0,1.5,2.1,.4,mat.dark);for(let h of [.35,.8,1.25,1.7])b(0,h,.03,1.46,.08,.43,mat.wood);for(let i=0;i<11;i++)b(-.58+(i%5)*.29,.49+Math.floor(i/5)*.48,.02,.12,.24,.24,i%2?mat.red:mat.paper)}if(kind==='rug')b(0,.025,0,2.7,.035,3.5,mat.red);if(kind==='picture'){b(0,1.95,0,1.2,.88,.09,mat.brass);b(0,1.95,.06,1.04,.72,.025,mat.red);b(-.18,1.95,.075,.34,.48,.01,mat.dark)}if(kind==='crate'){b(0,.38,0,.8,.76,.8,mat.wood);b(0,.7,.42,.8,.1,.06,mat.dark)}if(kind==='piano'){b(0,.9,0,2.1,.45,1.25,mat.dark);b(0,1.38,-.55,2.1,.75,.15,mat.dark);b(0,1.09,.42,1.82,.07,.32,mat.paper)}}
+if(kind==='bed'){b(0,.35,0,1.65,.3,2.5,mat.dark);b(0,.56,0,1.5,.2,2.25,mat.cloth);b(0,.87,-1.2,1.65,1.1,.16,mat.iron);b(0,.73,-.85,1.28,.16,.55,mat.paper)}if(kind==='sofa'){
+ const fabric=mat.cloth.clone();fabric.color.setHex(0xc3b4a6);fabric.roughness=1;fabric.metalness=0;
+ const worn=mat.cloth.clone();worn.color.setHex(0x9e9189);worn.roughness=1;worn.metalness=0;
+ const frame=mat.dark.clone();frame.color.setHex(0xd3b49c);frame.roughness=.94;
+ b(0,.31,0,2.08,.18,.88,frame);
+ b(0,.57,0,1.84,.33,.73,fabric);
+ b(0,1.03,.34,1.88,.83,.19,worn);
+ for(const a of [-.96,.96]){b(a,.78,0,.19,.55,.89,fabric);b(a,.27,.25,.12,.24,.12,frame);b(a,.27,-.25,.12,.24,.12,frame)}
+ for(const a of [-.57,0,.57])b(a,.75,-.025,.57,.11,.65,fabric);
+ for(const a of [-.46,.46])b(a,1.05,.22,.79,.51,.12,fabric);
+}if(kind==='shelf'){b(0,1.05,0,1.5,2.1,.4,mat.dark);for(let h of [.35,.8,1.25,1.7])b(0,h,.03,1.46,.08,.43,mat.wood);for(let i=0;i<11;i++)b(-.58+(i%5)*.29,.49+Math.floor(i/5)*.48,.02,.12,.24,.24,i%2?mat.red:mat.paper)}if(kind==='rug')b(0,.025,0,2.7,.035,3.5,mat.red);if(kind==='picture'){b(0,1.95,0,1.2,.88,.09,mat.brass);b(0,1.95,.06,1.04,.72,.025,mat.red);b(-.18,1.95,.075,.34,.48,.01,mat.dark)}if(kind==='crate'){b(0,.38,0,.8,.76,.8,mat.wood);b(0,.7,.42,.8,.1,.06,mat.dark)}if(kind==='piano'){b(0,.9,0,2.1,.45,1.25,mat.dark);b(0,1.38,-.55,2.1,.75,.15,mat.dark);b(0,1.09,.42,1.82,.07,.32,mat.paper)}}
 // Never overlay imported furniture on top of the procedural furniture.
 // If a detailed GLB exists, it replaces the old mesh entirely.
-if(furnishingAssets[kind] && kind!=='chair' && kind!=='table' && kind!=='desk'){
+if(furnishingAssets[kind] && !['chair','table','desk','cabinet','wardrobe'].includes(kind)){
  const [path,dimensions]=furnishingAssets[kind];
  mountModel(path,g,dimensions,[0,0,0],0,true);
 }
