@@ -309,10 +309,47 @@ for(let [x,z,y] of [[-8.87,-8,1.65],[8.87,-8,1.65],[-8.87,-8,4.85],[8.87,6,4.85]
 function keyItem(x,z,y,id,label,color){const group=new THREE.Group();group.position.set(x,y,z);scene.add(group);const m=new THREE.MeshStandardMaterial({color,metalness:.75,roughness:.24,emissive:color,emissiveIntensity:.14});const ring=new THREE.Mesh(new THREE.TorusGeometry(.12,.035,7,12),m);ring.position.x=-.18;group.add(ring);box(.06,0,0,.36,.065,.065,m,group);box(.23,-.08,0,.07,.16,.065,m,group);const obj={x,y,z,label,enabled:()=>!keys.has(id),action:()=>{keys.add(id);group.visible=false;notice('Получено: '+label);updateInventory()}};interactions.push(obj)}
 keyItem(-6,-4.1,.99,'ключ спальни','Ключ спальни',0xc7c6bb);keyItem(6,-7,.99,'латунный ключ','Латунный ключ',0xd6ad50);keyItem(-6,-8.2,3.9,'ключ выхода','Ключ выхода',0xe0ba54);
 const fuseMesh=box(6,1.14,7,.25,.35,.16,mat.green);interactions.push({x:6,y:1.1,z:7,label:'Предохранитель',enabled:()=>!fuse,action:()=>{fuse=true;fuseMesh.visible=false;notice('Предохранитель найден: питание замка восстановлено');updateInventory()}});
-// Decorative flashlight in hand, aligned with camera; spotlight direction follows camera.
-const hand=new THREE.Group();hand.position.set(.35,-.34,-.65);camera.add(hand);let cylinder=new THREE.Mesh(new THREE.CylinderGeometry(.07,.075,.36,12),mat.dark);cylinder.rotation.x=Math.PI/2;hand.add(cylinder);let head=new THREE.Mesh(new THREE.CylinderGeometry(.115,.095,.13,16),mat.iron);head.rotation.x=Math.PI/2;head.position.z=-.22;hand.add(head);let lens=new THREE.Mesh(new THREE.CircleGeometry(.088,16),new THREE.MeshBasicMaterial({color:0xffe8ac}));lens.position.z=-.30;hand.add(lens);
-mountModel('assets/models/flashlight_pbr.glb',hand,[.19,.19,.36],[0,-.12,-.12],Math.PI/2,false);
-modelSource('assets/models/flashlight_pbr.glb').then(source=>{if(source){cylinder.visible=false;head.visible=false;lens.visible=false}});
+// High-detail first-person flashlight, built from lightweight PBR meshes.
+const hand=new THREE.Group();hand.position.set(.35,-.34,-.65);camera.add(hand);
+const flashlight=new THREE.Group();hand.add(flashlight);
+const anodized=new THREE.MeshStandardMaterial({color:0x252b30,metalness:.78,roughness:.32});
+const blackRubber=new THREE.MeshStandardMaterial({color:0x121516,metalness:.03,roughness:.87});
+const steel=new THREE.MeshStandardMaterial({color:0x7d8589,metalness:.88,roughness:.23});
+const darkSteel=new THREE.MeshStandardMaterial({color:0x383e40,metalness:.75,roughness:.38});
+const glass=new THREE.MeshPhysicalMaterial({color:0xe8edf1,metalness:.18,roughness:.13,clearcoat:1,clearcoatRoughness:.08});
+const reflector=new THREE.MeshStandardMaterial({color:0xd4d5c9,metalness:.92,roughness:.12,side:THREE.DoubleSide});
+const emitter=new THREE.MeshBasicMaterial({color:0xffefcb});
+function flashCylinder(r1,r2,len,z,material,segments=24){
+ const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,len,segments),material);
+ m.rotation.x=Math.PI/2;m.position.z=z;flashlight.add(m);return m;
+}
+flashCylinder(.061,.068,.38,.045,anodized);
+flashCylinder(.068,.071,.22,.04,blackRubber);
+for(let k=0;k<11;k++)flashCylinder(.0715,.0715,.006,-.055+k*.018,darkSteel,24);
+flashCylinder(.076,.071,.065,.18,anodized);
+flashCylinder(.078,.078,.014,.205,steel);
+flashCylinder(.084,.073,.095,-.185,anodized);
+flashCylinder(.105,.084,.075,-.25,anodized,32);
+flashCylinder(.109,.109,.018,-.292,steel,32);
+flashCylinder(.097,.097,.013,-.304,blackRubber,32);
+flashCylinder(.091,.091,.006,-.313,reflector,32);
+flashCylinder(.077,.077,.003,-.319,glass,32);
+flashCylinder(.028,.028,.004,-.325,emitter,24);
+flashCylinder(.069,.069,.012,.241,blackRubber);
+flashCylinder(.055,.055,.012,.248,steel);
+const switchBase=new THREE.Mesh(new THREE.BoxGeometry(.067,.018,.105),darkSteel);
+switchBase.position.set(0,.071,.028);flashlight.add(switchBase);
+const switchCap=new THREE.Mesh(new THREE.BoxGeometry(.045,.013,.064),blackRubber);
+switchCap.position.set(0,.086,.018);flashlight.add(switchCap);
+const clip=new THREE.Mesh(new THREE.BoxGeometry(.017,.012,.21),steel);
+clip.position.set(.067,.013,.035);flashlight.add(clip);
+const clipTip=new THREE.Mesh(new THREE.BoxGeometry(.02,.026,.035),steel);
+clipTip.position.set(.067,.003,.135);flashlight.add(clipTip);
+for(const side of [-1,1]){
+ const screw=new THREE.Mesh(new THREE.SphereGeometry(.007,8,6),darkSteel);
+ screw.position.set(side*.086,.005,-.267);flashlight.add(screw);
+}
+flashlight.rotation.set(-.06,-.15,-.12);
 const spot=new THREE.SpotLight(0xffe7c1,17,13,.68,1,1.5);spot.position.set(0,-.06,-.27);spot.target.position.set(0,-.04,-8);camera.add(spot,spot.target);
 function notice(s){$('#message').textContent=s;$('#message').style.opacity='1';clearTimeout(notice.timer);notice.timer=setTimeout(()=>$('#message').style.opacity='0',2500)}function updateInventory(){$('#items').textContent='Инвентарь: '+([ ...keys,...(fuse?['предохранитель']:[])].join(', ')||'пусто');$('#objective').textContent=fuse&&keys.has('ключ выхода')?'Вернись к главному выходу':'Найди ключи и предохранитель'}
 const ray=new THREE.Raycaster();let near=null;function findNear(){ray.setFromCamera(new THREE.Vector2(0,0),camera);let best=null,bestScore=2.55;for(let o of interactions){if(o.enabled&&!o.enabled())continue;const v=new THREE.Vector3(o.x,o.y,o.z);let distance=camera.position.distanceTo(v);if(distance>2.7)continue;let direction=v.clone().sub(camera.position).normalize();let facing=direction.dot(ray.ray.direction);if(facing<.69)continue;// Block interactions through solid walls or closed doors.
