@@ -1,0 +1,37 @@
+name: Verify THE HOUSE assets
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source and assets
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, struct, sys
+          root=pathlib.Path('.')
+          manifest=json.loads((root/'ASSET_MANIFEST.json').read_text())
+          missing=[]
+          errors=[]
+          for item in manifest['models']:
+              p=root/item['path']
+              if not p.is_file():
+                  missing.append(item['path'])
+                  continue
+              data=p.read_bytes()
+              if len(data)<12 or data[:4]!=b'glTF' or struct.unpack_from('<I',data,8)[0]!=len(data):
+                  errors.append(item['path']+' invalid GLB header or length')
+          source=(root/'index.html').read_text()
+          import re
+          for path in set(re.findall(r'assets/[\w./-]+\.(?:glb|png|jpg|jpeg|webp|ktx2)',source,re.I)):
+              if not (root/path).is_file():
+                  missing.append(path)
+          print('Checked',len(manifest['models']),'GLB model records')
+          if missing:print('Missing assets:\n'+'\n'.join(sorted(set(missing))))
+          if errors:print('Invalid models:\n'+'\n'.join(errors))
+          if missing or errors:sys.exit(1)
+          print('All referenced assets exist; GLB headers valid')
+          PY
