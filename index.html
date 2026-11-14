@@ -89,7 +89,26 @@ function boxGeometry(w,h,d){
  uv.needsUpdate=true;boxGeometryCache.set(key,g);return g;
 }
 function box(x,y,z,w,h,d,m,parent=scene){let o=new THREE.Mesh(boxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=false;o.receiveShadow=true;parent.add(o);return o}
-function wall(x,y,z,w,h,d){box(x,y,z,w,h,d,y>3.3?mat.wallUpper:y<0?(x<0?mat.wallBasement:mat.cracked):mat.wall);solids.push({x,z,w,d,y0:y-h/2,y1:y+h/2})}
+// Wall sections must use consistent world-space texel density; a short jamb
+// must not receive the same full repeated wallpaper pattern as a long wall.
+const wallMaterialCache=new Map();
+function scaledWallMaterial(source,width,height){
+ const rx=Math.max(.12,width/4.5),ry=Math.max(.3,height/3.25);
+ const key=source.uuid+':'+rx.toFixed(2)+':'+ry.toFixed(2);
+ if(wallMaterialCache.has(key))return wallMaterialCache.get(key);
+ const m=source.clone();
+ for(const field of ['map','normalMap','metalnessMap','roughnessMap']){
+  if(!source[field])continue;
+  const t=source[field].clone();t.repeat.set(rx,ry);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.needsUpdate=true;m[field]=t;
+ }
+ wallMaterialCache.set(key,m);return m;
+}
+function wall(x,y,z,w,h,d){
+ const source=y>3.3?mat.wallUpper:y<0?(x<0?mat.wallBasement:mat.cracked):mat.wall;
+ box(x,y,z,w,h,d,scaledWallMaterial(source,Math.max(w,d),h));
+ solids.push({x,z,w,d,y0:y-h/2,y1:y+h/2});
+}
 function dividerX(x,z1,z2,openings=[],height=3.25,y0=0){let cursor=z1;for(let [a,b] of openings.sort((p,q)=>p[0]-q[0])){if(a>cursor)wall(x,y0+height/2,(cursor+a)/2,.22,height,a-cursor);wall(x,y0+(height+2.45)/2,(a+b)/2,.22,height-2.45,b-a);cursor=b}if(cursor<z2)wall(x,y0+height/2,(cursor+z2)/2,.22,height,z2-cursor)}
 function dividerZ(z,x1,x2,openings=[],height=3.25,y0=0){let cursor=x1;for(let [a,b] of openings.sort((p,q)=>p[0]-q[0])){if(a>cursor)wall((cursor+a)/2,y0+height/2,z,a-cursor,height,.22);wall((a+b)/2,y0+(height+2.45)/2,z,b-a,height-2.45,.22);cursor=b}if(cursor<x2)wall((cursor+x2)/2,y0+height/2,z,x2-cursor,height,.22)}
 function makeDoor(x,z,axis,label,required='',onOpen=null,y=0){
