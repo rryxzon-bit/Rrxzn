@@ -74,7 +74,7 @@ const furnishingAssets={
  wardrobe:['assets/models_mobile/victorian_wardrobe_hero_pbr_orm.glb',[1.8,2.35,.85]],
  bed:['assets/models_mobile/antique_bed_detail_pbr_orm.glb',[1.8,1.65,2.5]]
 };
-const geo=new THREE.BoxGeometry(1,1,1),solids=[],furnitureColliders=[],doors=[],interactions=[],lights=[],keys=new Set();let fuse=false,won=false,flashOn=true,crouched=false,sprint=false,active=false,yaw=0,pitch=0,sensitivity=1;let px=0,pz=0,py=1.65,level=0;
+const cabinetDoors=[];const geo=new THREE.BoxGeometry(1,1,1),solids=[],furnitureColliders=[],doors=[],interactions=[],lights=[],keys=new Set();let fuse=false,won=false,flashOn=true,crouched=false,sprint=false,active=false,yaw=0,pitch=0,sensitivity=1;let px=0,pz=0,py=1.65,level=0;
 // UVs on scaled unit cubes used to stretch 1 square of wallpaper across whole walls.
 // Build real-sized geometry and generate world-size UV repeats for each face.
 const boxGeometryCache=new Map();
@@ -340,24 +340,34 @@ if(bounds[kind]){const [w,d]=bounds[kind],c=Math.abs(Math.cos(angle)),si=Math.ab
 let g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=angle;scene.add(g);const b=(a,c,d,w,h,dep,m)=>box(a,c,d,w,h,dep,m,g);if(!sculptedFurniture(kind,g)){
 if(kind==='cabinet'||kind==='wardrobe'){
  const tall=kind==='wardrobe',h=tall?2.15:1.4,w=tall?1.8:1.4,dep=.65;
- const carved=new THREE.MeshStandardMaterial({color:tall?0x463020:0x63452c,roughness:.86});
- const recessed=new THREE.MeshStandardMaterial({color:0x261b15,roughness:.94});
- const bronze=new THREE.MeshStandardMaterial({color:0x716045,metalness:.7,roughness:.6});
- // Separate side panels, cornice, plinth, recessed doors and handles.
- b(0,h/2,0,w-.09,h-.17,dep-.07,recessed);
- for(const sx of [-1,1])b(sx*(w/2-.065),h/2,0,.12,h-.12,dep,carved);
- b(0,h-.075,0,w+.13,.15,dep+.14,carved);
- b(0,.075,0,w+.09,.15,dep+.1,carved);
- b(0,h/2,-dep/2+.04,w-.18,h-.24,.045,carved);
+ const oak=mat.dark.clone();oak.color.setHex(tall?0xc1a28a:0xd0ad8c);oak.roughness=.91;
+ const panel=mat.wood.clone();panel.color.setHex(0xa9876b);panel.roughness=.93;
+ const bronze=new THREE.MeshStandardMaterial({color:0x716045,metalness:.58,roughness:.7});
+ // Hollow cabinet shell: back, side walls, top, bottom and real interior shelves.
+ b(0,h/2,-dep/2+.035,w-.1,h-.15,.07,oak);
+ for(const sx of [-1,1])b(sx*(w/2-.045),h/2,0,.09,h-.08,dep,oak);
+ b(0,h-.055,0,w+.08,.11,dep+.08,oak);
+ b(0,.075,0,w+.05,.15,dep+.06,oak);
+ for(const yy of (tall?[.48,.96,1.43]:[.47,.91]))b(0,yy,-.02,w-.18,.045,dep-.15,panel);
  for(const sx of [-1,1]){
-  const dw=(w-.21)/2;
-  b(sx*(dw/2+.018),h/2,dep/2+.008,dw-.025,h-.3,.055,carved);
-  b(sx*(dw/2+.018),h/2,dep/2+.04,dw-.16,h-.49,.013,recessed);
-  b(sx*(dw/2+.018),h/2,dep/2+.052,dw-.21,h-.54,.012,carved);
-  b(sx*.065,h/2,dep/2+.08,.028,.13,.035,bronze);
-  for(const yy of [.24,h-.24])b(sx*(w/2-.15),yy,dep/2+.03,.06,.07,.06,bronze);
+  const half=w/2-.055,dw=half-.02;
+  const hinge=new THREE.Group();hinge.position.set(sx*half,0,dep/2-.008);g.add(hinge);
+  const doorBox=(xx,yy,zz,ww,hh,dd,m)=>box(xx,yy,zz,ww,hh,dd,m,hinge);
+  // Door leaf extends inward from its side hinge and has raised wooden detailing.
+  doorBox(-sx*dw/2,h/2,0,dw,h-.22,.055,oak);
+  doorBox(-sx*dw/2,h/2,.034,dw-.13,h-.4,.012,panel);
+  for(const offset of [-dw+.038,-.038])doorBox(-sx*offset,h/2,.056,.045,h-.36,.025,oak);
+  for(const yy of [.2,h-.2])doorBox(-sx*dw/2,yy,.057,dw-.1,.042,.025,oak);
+  doorBox(-sx*(dw-.13),h*.52,.085,.035,.12,.05,bronze);
+  const entry={hinge,open:false,target:0,angle:0,side:sx};
+  cabinetDoors.push(entry);
+  const front=new THREE.Vector3(-sx*(dw-.13),h*.52,dep/2+.13);
+  g.updateMatrixWorld(true);const world=g.localToWorld(front.clone());
+  interactions.push({x:world.x,y:world.y,z:world.z,label:(tall?'Шкаф':'Шкафчик')+' — открыть/закрыть',enabled:()=>true,action:()=>{
+   entry.open=!entry.open;entry.target=entry.open?-sx*1.55:0;
+  }});
  }
- for(const sx of [-1,1])b(sx*(w/2-.15),.045,0,.12,.09,.48,recessed);
+ for(const sx of [-1,1])b(sx*(w/2-.14),.04,0,.12,.08,.48,oak);
 }
 if(kind==='bed'){b(0,.35,0,1.65,.3,2.5,mat.dark);b(0,.56,0,1.5,.2,2.25,mat.cloth);b(0,.87,-1.2,1.65,1.1,.16,mat.iron);b(0,.73,-.85,1.28,.16,.55,mat.paper)}if(kind==='sofa'){b(0,.54,0,2.1,.68,.88,mat.cloth);b(0,1.04,.39,2.1,1,.2,mat.cloth);for(let a of [-.95,.95])b(a,.79,0,.23,.66,.9,mat.cloth)}if(kind==='shelf'){b(0,1.05,0,1.5,2.1,.4,mat.dark);for(let h of [.35,.8,1.25,1.7])b(0,h,.03,1.46,.08,.43,mat.wood);for(let i=0;i<11;i++)b(-.58+(i%5)*.29,.49+Math.floor(i/5)*.48,.02,.12,.24,.24,i%2?mat.red:mat.paper)}if(kind==='rug')b(0,.025,0,2.7,.035,3.5,mat.red);if(kind==='picture'){b(0,1.95,0,1.2,.88,.09,mat.brass);b(0,1.95,.06,1.04,.72,.025,mat.red);b(-.18,1.95,.075,.34,.48,.01,mat.dark)}if(kind==='crate'){b(0,.38,0,.8,.76,.8,mat.wood);b(0,.7,.42,.8,.1,.06,mat.dark)}if(kind==='piano'){b(0,.9,0,2.1,.45,1.25,mat.dark);b(0,1.38,-.55,2.1,.75,.15,mat.dark);b(0,1.09,.42,1.82,.07,.32,mat.paper)}}
 // Never overlay imported furniture on top of the procedural furniture.
@@ -412,9 +422,14 @@ for(const [x,z] of [[-6,-6],[6,-6],[-6,7],[6,7],[0,-5]]){
 }
 // Upper floor above hall and bedroom; stairwell void in southwest back.
 box(0,3.2,-5.5,18,.24,13,mat.floor);box(3,3.2,7,12,.24,10,mat.floor);box(0,6.55,0,18,.25,24,ceilingMat);dividerX(-3,-12,1,[[-7,-5]],3.2,3.2);dividerX(3,-12,12,[[6,8]],3.2,3.2);dividerZ(1,-9,-3,[],3.2,3.2);dividerZ(1,3,9,[[5.1,6.9]],3.2,3.2);dividerZ(-2.4,3,9,[[5.2,6.9]],3.2,3.2);dividerZ(-1.8,-9,-3,[[-6.9,-5.2]],3.2,3.2);wall(-9,4.8,0,.3,3.2,24);wall(9,4.8,0,.3,3.2,24);wall(0,4.8,-12,18,3.2,.3);wall(0,4.8,12,18,3.2,.3);
+// Seal the accidental 1m-wide slab gap between the two upstairs floor sections.
+// Preserve the intended stairwell void at x=-7.35..-4.65, z=2..10.
+box(0,3.2,1.5,18,.24,1,mat.floor);
+box(-3.75,3.2,1.5,1.5,.24,1,mat.floor);
 // Ground-floor ceiling underside: the upper slab was exposed as dark floorboards.
 box(0,3.05,-5.5,18,.09,13,ceilingMat);
 box(3,3.05,7,12,.09,10,ceilingMat);
+box(0,3.05,1.5,18,.09,1,ceilingMat);
 // Finish stairwell edges with dark timber fascia rather than exposed gaps.
 for(const edgeX of [-7.35,-4.65])box(edgeX,3.12,6,.16,.25,8.1,mat.dark);
 box(-6,3.12,2,.16,.25,2.8,mat.dark);
@@ -448,6 +463,13 @@ function frameArt(x,y,z,rot=0,variant=0){const g=new THREE.Group();g.position.se
 for(const [x,y,z,r,v] of [[-8.74,1.8,-5,Math.PI/2,0],[8.74,1.8,-5,-Math.PI/2,1],[-8.74,5,-5,Math.PI/2,1],[8.74,5,8,-Math.PI/2,0],[0,1.9,11.75,Math.PI,1]])frameArt(x,y,z,r,v);
 function chandelier(x,y,z){const g=new THREE.Group();g.position.set(x,y,z);scene.add(g);const chain=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.5,8),mat.brass);chain.position.y=.2;g.add(chain);const ring=new THREE.Mesh(new THREE.TorusGeometry(.34,.038,8,16),mat.brass);ring.rotation.x=Math.PI/2;ring.position.y=-.12;g.add(ring);for(let i=0;i<5;i++){const a=i*Math.PI*2/5;const orb=new THREE.Mesh(new THREE.SphereGeometry(.095,10,8),new THREE.MeshBasicMaterial({color:0xffdf9f}));orb.position.set(Math.cos(a)*.34,-.12,Math.sin(a)*.34);g.add(orb)}}
 for(const [x,y,z] of [[0,2.7,-4],[-6,2.7,-6],[6,2.7,-6],[6,5.9,7]])chandelier(x,y,z);
+// Intentional furnishing clusters: kitchen storage, study reference shelves,
+// upstairs bedroom wardrobes; keep the central corridors and door approaches clear.
+furniture('shelf',8.15,-7.7,Math.PI/2);
+furniture('shelf',8.15,6.0,Math.PI/2);
+furniture('cabinet',-8.0,-5.0,Math.PI/2);
+furniture('shelf',-8.0,-7.1,Math.PI/2,3.2);
+furniture('cabinet',7.7,-8.8,Math.PI/2,3.2);
 // Additional furniture makes the ground-floor spaces recognizable.
 furniture('shelf',-8,7,Math.PI/2);furniture('chair',-4.3,-9.6,Math.PI/2);
 furniture('cabinet',8,-4.2,Math.PI/2);furniture('table',6,4.2,0,3.2);furniture('chair',6,5.3,0,3.2);
@@ -590,5 +612,5 @@ for(let step=0;step<stepCount;step++){
  const fz=updateFloor(px,tz);
  if(Math.abs(fz-currentFloor(px,pz))<.29&&!collides(px,tz,fz))pz=tz;
 }
-let stair=stairHeight(px,pz),bstair=basementStairHeight(px,pz);if(bstair!==null){level=bstair< -2.9?-1:0}else if(stair!==null){level=stair>2.9?1:0}else if(level===0&&py>4.2)level=1;let ground=bstair!==null?bstair:stair!==null?stair:(level===1?3.2:level===-1?-3.2:0);py=THREE.MathUtils.damp(py,ground+(crouched?1.08:1.65),13,dt);if(stair===null&&level===0&&py>4.3)level=1;camera.position.set(px,py,pz);camera.rotation.set(pitch,yaw,0);hand.position.y=-.34+Math.sin(performance.now()*.007)*Math.hypot(mx,my)*.012;if(frames%3===0)findNear();for(let d of doors){const nextAngle=THREE.MathUtils.damp(d.angle,d.target,9,dt);if(!doorBlocked(d,nextAngle))d.angle=nextAngle;d.pivot.rotation.y=d.angle}$('#room').textContent=(level===-1?(px<-3?(pz<1?'Котельная':'Склад'):px>3?(pz<1?'Мастерская':'Запертая камера'):'Подвальный коридор'):level===1?(px<-3?(pz< -1.8?'Главная спальня':pz<1?'Гостевая спальня':'Лестничный холл'):px>3?(pz< -2.4?'Детская':pz<1?'Верхняя гостиная':'Музыкальная комната'):'Верхний холл'):(px<-3?(pz< -2.1?'Гостиная':pz<1?'Библиотека':'Лестница'):px>3?(pz< -1.5?'Кухня':pz<1?'Столовая':'Кабинет'):'Прихожая'))}renderer.render(scene,camera);frames++;if(performance.now()-lastFPS>1000){fps=frames;frames=0;lastFPS=performance.now();if(fps<24){lowFPSSeconds++;highFPSSeconds=0}else if(fps>48){highFPSSeconds++;lowFPSSeconds=0}else{lowFPSSeconds=highFPSSeconds=0}if(lowFPSSeconds>=4){renderer.setPixelRatio(Math.max(.55,renderer.getPixelRatio()-.1));lowFPSSeconds=0}if(highFPSSeconds>=12){renderer.setPixelRatio(Math.min(Math.min(devicePixelRatio,.95),renderer.getPixelRatio()+.05));highFPSSeconds=0}$('#perf').textContent=fps+' FPS • '+(level===-1?'Подвал':level===1?'2 этаж':'1 этаж')+' • джойстик '+Math.round(Math.hypot(jx,jy)*100)+'% • x:'+px.toFixed(1)+' z:'+pz.toFixed(1)}}loop();window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+let stair=stairHeight(px,pz),bstair=basementStairHeight(px,pz);if(bstair!==null){level=bstair< -2.9?-1:0}else if(stair!==null){level=stair>2.9?1:0}else if(level===0&&py>4.2)level=1;let ground=bstair!==null?bstair:stair!==null?stair:(level===1?3.2:level===-1?-3.2:0);py=THREE.MathUtils.damp(py,ground+(crouched?1.08:1.65),13,dt);if(stair===null&&level===0&&py>4.3)level=1;camera.position.set(px,py,pz);camera.rotation.set(pitch,yaw,0);hand.position.y=-.34+Math.sin(performance.now()*.007)*Math.hypot(mx,my)*.012;if(frames%3===0)findNear();for(const c of cabinetDoors){c.angle=THREE.MathUtils.damp(c.angle,c.target,8,dt);c.hinge.rotation.y=c.angle}for(let d of doors){const nextAngle=THREE.MathUtils.damp(d.angle,d.target,9,dt);if(!doorBlocked(d,nextAngle))d.angle=nextAngle;d.pivot.rotation.y=d.angle}$('#room').textContent=(level===-1?(px<-3?(pz<1?'Котельная':'Склад'):px>3?(pz<1?'Мастерская':'Запертая камера'):'Подвальный коридор'):level===1?(px<-3?(pz< -1.8?'Главная спальня':pz<1?'Гостевая спальня':'Лестничный холл'):px>3?(pz< -2.4?'Детская':pz<1?'Верхняя гостиная':'Музыкальная комната'):'Верхний холл'):(px<-3?(pz< -2.1?'Гостиная':pz<1?'Библиотека':'Лестница'):px>3?(pz< -1.5?'Кухня':pz<1?'Столовая':'Кабинет'):'Прихожая'))}renderer.render(scene,camera);frames++;if(performance.now()-lastFPS>1000){fps=frames;frames=0;lastFPS=performance.now();if(fps<24){lowFPSSeconds++;highFPSSeconds=0}else if(fps>48){highFPSSeconds++;lowFPSSeconds=0}else{lowFPSSeconds=highFPSSeconds=0}if(lowFPSSeconds>=4){renderer.setPixelRatio(Math.max(.55,renderer.getPixelRatio()-.1));lowFPSSeconds=0}if(highFPSSeconds>=12){renderer.setPixelRatio(Math.min(Math.min(devicePixelRatio,.95),renderer.getPixelRatio()+.05));highFPSSeconds=0}$('#perf').textContent=fps+' FPS • '+(level===-1?'Подвал':level===1?'2 этаж':'1 этаж')+' • джойстик '+Math.round(Math.hypot(jx,jy)*100)+'% • x:'+px.toFixed(1)+' z:'+pz.toFixed(1)}}loop();window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script></body></html>
