@@ -1,33 +1,57 @@
 import os, math, random, struct, json, io
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFilter
+import numpy as np
+from PIL import Image, ImageFilter
 import trimesh
 random.seed(20261115)
+rng=np.random.default_rng(20261115)
 root=Path('assets'); (root/'pbr').mkdir(parents=True,exist_ok=True)
-colors={'peeling_plaster':(112,105,91),'aged_oak':(93,64,40),'weathered_floor':(77,54,35),'old_ceramic':(91,93,89),'aged_door_wood':(83,57,37),'dark_walnut':(53,35,27),'oxidized_iron':(60,67,66),'dirty_linen':(151,137,117)}
+# Distinct material families: plaster, masonry, wood grain, tile, rust and fabric.
+colors={'peeling_plaster':(149,138,121),'cracked_plaster':(115,109,99),'aged_oak':(101,70,45),'weathered_floor':(87,63,44),'old_ceramic':(116,119,113),'aged_door_wood':(88,57,36),'dark_walnut':(59,39,29),'oxidized_iron':(71,78,75),'dirty_linen':(145,131,111),'stained_stone':(91,91,85)}
+n=512
+yy,xx=np.mgrid[:n,:n].astype(np.float32)
 for name,base in colors.items():
- n=256; im=Image.new('RGB',(n,n)); pix=im.load()
- grain=Image.new('L',(n,n)); gp=grain.load()
- for y in range(n):
-  for x in range(n):
-   noise=random.gauss(0,11)
-   if 'wood' in name or name in ('aged_oak','weathered_floor','dark_walnut'):
-    noise+=12*math.sin(x*.21+4*math.sin(y*.019))+7*math.sin(x*.49)
-   if name=='old_ceramic' and (x%64<3 or y%64<3):noise-=34
-   if name=='peeling_plaster' and math.sin(x*.08)*math.sin(y*.065)>.6:noise+=24
-   if name=='dirty_linen':noise+=7*math.sin(x*.8)*math.sin(y*.8)
-   pix[x,y]=tuple(max(0,min(255,int(v+noise))) for v in base)
-   gp[x,y]=max(0,min(255,int(128+noise)))
- im.save(root/'pbr'/f'{name}_basecolor.jpg',quality=86)
- normal=Image.new('RGB',(n,n),(128,128,255)); np=normal.load()
- for y in range(1,n-1):
-  for x in range(1,n-1):
-   dx=gp[x+1,y]-gp[x-1,y];dy=gp[x,y+1]-gp[x,y-1]
-   np[x,y]=(max(0,min(255,128-dx)),max(0,min(255,128-dy)),246)
- normal.save(root/'pbr'/f'{name}_normal.png')
- rough=215 if name!='oxidized_iron' else 145
- metal=170 if name=='oxidized_iron' else 0
- Image.new('RGB',(n,n),(255,rough,metal)).save(root/'pbr'/f'{name}_metallic_roughness.png')
+ coarse=np.asarray(Image.fromarray(rng.integers(0,256,(64,64),dtype=np.uint8)).resize((n,n),Image.Resampling.BICUBIC),dtype=np.float32)
+ fine=rng.normal(0,5,(n,n))
+ noise=(coarse-127)*.20+fine
+ if name in ('aged_oak','weathered_floor','aged_door_wood','dark_walnut'):
+  grain=12*np.sin(xx*.15+3*np.sin(yy*.012))+5*np.sin(xx*.39+yy*.007)
+  noise+=grain
+  if name=='weathered_floor':
+   seams=(np.mod(xx,128)<3)|(np.mod(yy+np.floor(xx/128)*23,256)<3)
+   noise=np.where(seams,noise-42,noise)
+  if name=='aged_door_wood':
+   seams=(np.mod(xx,180)<4)
+   noise=np.where(seams,noise-24,noise)
+ elif name=='old_ceramic':
+  seams=(np.mod(xx,128)<5)|(np.mod(yy,128)<5)
+  noise=np.where(seams,noise-48,noise)
+  noise+=np.sin(xx*.035)*np.sin(yy*.031)*4
+ elif name in ('peeling_plaster','cracked_plaster'):
+  patch=np.sin(xx*.024+np.sin(yy*.021))*np.sin(yy*.028)
+  noise+=np.where(patch>.42,20,-4)
+  if name=='cracked_plaster':
+   crack=np.abs(np.sin(xx*.029+np.sin(yy*.036)*1.5))<.016
+   noise=np.where(crack,noise-49,noise)
+ elif name=='stained_stone':
+  seams=(np.mod(xx+np.floor(yy/128)*34,128)<4)|(np.mod(yy,128)<4)
+  noise=np.where(seams,noise-37,noise)
+  noise+=np.sin(xx*.024)*np.cos(yy*.035)*13
+ elif name=='oxidized_iron':
+  rust=np.sin(xx*.041)*np.cos(yy*.035)+np.sin(xx*.09+yy*.05)
+  noise+=np.where(rust>.7,24,-2)
+ elif name=='dirty_linen':
+  noise+=3*np.sin(xx*.8)+3*np.sin(yy*.8)
+ albedo=np.clip(np.stack([base[i]+noise*(1.0 if i==0 else .92 if i==1 else .85) for i in range(3)],axis=-1),0,255).astype(np.uint8)
+ Image.fromarray(albedo).save(root/'pbr'/f'{name}_basecolor.jpg',quality=89,optimize=True)
+ h=noise.astype(np.float32)
+ gx=np.gradient(h,axis=1);gy=np.gradient(h,axis=0)
+ normal=np.stack([np.clip(128-gx*.95,0,255),np.clip(128-gy*.95,0,255),np.full_like(h,247)],axis=-1).astype(np.uint8)
+ Image.fromarray(normal).save(root/'pbr'/f'{name}_normal.png',optimize=True)
+ rough=145 if name=='oxidized_iron' else 194 if name in ('aged_oak','dark_walnut','aged_door_wood') else 225
+ metal=135 if name=='oxidized_iron' else 0
+ orm=np.zeros((n,n,3),dtype=np.uint8);orm[:,:,0]=255;orm[:,:,1]=np.clip(rough+noise*.28,30,255).astype(np.uint8);orm[:,:,2]=metal
+ Image.fromarray(orm).save(root/'pbr'/f'{name}_metallic_roughness.png',optimize=True)
 def cube(x,y,z,w,h,d,color):
  mesh=trimesh.creation.box(extents=[w,h,d]);mesh.apply_translation([x,y,z]);mesh.visual.vertex_colors=list(color)+[255];return mesh
 def save(path,parts):
